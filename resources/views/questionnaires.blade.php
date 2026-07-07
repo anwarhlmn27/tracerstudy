@@ -115,9 +115,22 @@
                         @forelse($responses as $index => $response)
                         @php
                             $roleTarget = $response->form->target_role ?? '-';
-                            $namaResponden = $response->user->name ?? '-';
-                            if ($roleTarget === 'alumni' && $response->user->student) {
-                                $namaResponden = $response->user->student->nama_student;
+                            $namaResponden = '-';
+                            if ($response->user) {
+                                $namaResponden = $response->user->name ?? '-';
+                                if ($roleTarget === 'alumni' && $response->user->student) {
+                                    $namaResponden = $response->user->student->nama_student;
+                                }
+                            } else {
+                                if ($response->guestStudent) {
+                                    if ($roleTarget === 'alumni') {
+                                        $namaResponden = $response->guestStudent->nama_student;
+                                    } else {
+                                        $namaResponden = 'Guest (Mengevaluasi: ' . $response->guestStudent->nama_student . ')';
+                                    }
+                                } else {
+                                    $namaResponden = 'Guest';
+                                }
                             }
                             $answersArray = $response->answers->map(function($a) {
                                 return [

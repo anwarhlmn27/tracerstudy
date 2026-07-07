@@ -168,4 +168,89 @@ class PublicSurveyTest extends TestCase
             'guest_student_id' => $this->student->id,
         ]);
     }
+
+    public function test_cannot_submit_duplicate_form_in_same_form_group(): void
+    {
+        $form1 = QuestionnaireForm::create([
+            'id' => Str::uuid(),
+            'title' => 'Tracer Study Form A',
+            'target_role' => 'alumni',
+            'form_group' => 'Tracer Study',
+            'is_active' => true
+        ]);
+
+        $form2 = QuestionnaireForm::create([
+            'id' => Str::uuid(),
+            'title' => 'Tracer Study Form B',
+            'target_role' => 'alumni',
+            'form_group' => 'Tracer Study',
+            'is_active' => true
+        ]);
+
+        $qAlumni = FormQuestion::create([
+            'id' => Str::uuid(),
+            'form_id' => $form1->id,
+            'question_text' => 'Pilih Nama Alumni',
+            'question_type' => 'select',
+            'is_required' => true,
+            'sort_order' => 1
+        ]);
+
+        $qAlumni2 = FormQuestion::create([
+            'id' => Str::uuid(),
+            'form_id' => $form2->id,
+            'question_text' => 'Pilih Nama Alumni',
+            'question_type' => 'select',
+            'is_required' => true,
+            'sort_order' => 1
+        ]);
+
+        // Submit form 1 first
+        $response1 = $this->post('/kuesioner', [
+            'form_id' => $form1->id,
+            'answers' => [
+                $qAlumni->id => 'Budi Santoso'
+            ]
+        ]);
+        $response1->assertRedirect(route('public.form'));
+
+        // Now try to submit form 2 which is in the same form_group 'Tracer Study'
+        $response2 = $this->post('/kuesioner', [
+            'form_id' => $form2->id,
+            'answers' => [
+                $qAlumni2->id => 'Budi Santoso'
+            ]
+        ]);
+        
+        $response2->assertSessionHasErrors(['form_id']);
+        $this->assertEquals(1, FormResponse::count());
+    }
+
+    public function test_student_api_returns_has_submitted_flag(): void
+    {
+        $form = QuestionnaireForm::create([
+            'id' => Str::uuid(),
+            'title' => 'Tracer Study Form A',
+            'target_role' => 'alumni',
+            'form_group' => 'Tracer Study',
+            'is_active' => true
+        ]);
+
+        // Submit once
+        FormResponse::create([
+            'id' => Str::uuid(),
+            'form_id' => $form->id,
+            'guest_student_id' => $this->student->id
+        ]);
+
+        // Call the API
+        $response = $this->getJson("/api/students?prodi_id={$this->prodi->id}&form_id={$form->id}");
+
+        $response->assertStatus(200);
+        $response->assertJsonFragment([
+            'id' => $this->student->id,
+            'nama_student' => 'Budi Santoso',
+            'has_submitted' => true
+        ]);
+    }
 }

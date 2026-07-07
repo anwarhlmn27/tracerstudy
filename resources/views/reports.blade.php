@@ -427,22 +427,53 @@
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Color palette
+    // 🎨 Color palette & Gradients
     const maroon = '#800000';
-    const maroonLight = 'rgba(128, 0, 0, 0.15)';
     const emerald = '#059669';
     const amber = '#d97706';
     const violet = '#7c3aed';
     const rose = '#e11d48';
     const cyan = '#0891b2';
+    const blue = '#3b82f6';
+    const indigo = '#6366f1';
     
-    const colors = [emerald, rose, amber, violet, cyan, maroon, '#3b82f6', '#f97316', '#14b8a6', '#6366f1'];
+    const colors = [emerald, rose, amber, violet, cyan, maroon, blue, '#f97316', '#14b8a6', indigo];
 
-    Chart.defaults.font.family = "'Roboto', sans-serif";
+    Chart.defaults.font.family = "'Inter', 'Roboto', sans-serif";
     Chart.defaults.color = '#6b7280';
+    
+    // Common Tooltip Styling
+    const tooltipOptions = {
+        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+        titleColor: '#f9fafb',
+        bodyColor: '#e5e7eb',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        cornerRadius: 8,
+        padding: 12,
+        boxPadding: 6,
+        usePointStyle: true,
+    };
+
+    // Common Grid Styling
+    const gridOptions = {
+        color: 'rgba(0, 0, 0, 0.04)',
+        borderDash: [5, 5],
+        drawBorder: false,
+    };
+
+    // Helper: Create Gradient
+    function createGradient(ctx, colorStart, colorEnd) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, colorStart);
+        gradient.addColorStop(1, colorEnd);
+        return gradient;
+    }
 
     // 1. Trend Line Chart
-    new Chart(document.getElementById('trendChart'), {
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const trendGradient = createGradient(trendCtx, 'rgba(128, 0, 0, 0.4)', 'rgba(128, 0, 0, 0.0)');
+    new Chart(trendCtx, {
         type: 'line',
         data: {
             labels: @json($monthLabels),
@@ -450,50 +481,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 label: 'Jumlah Respons',
                 data: @json($monthCounts),
                 borderColor: maroon,
-                backgroundColor: maroonLight,
+                backgroundColor: trendGradient,
                 borderWidth: 3,
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: maroon,
-                pointBorderColor: '#fff',
+                pointBackgroundColor: '#fff',
+                pointBorderColor: maroon,
                 pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 8,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: maroon,
+                pointHoverBorderColor: '#fff',
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: { duration: 1500, easing: 'easeOutQuart' },
+            interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1f2937',
-                    titleColor: '#f9fafb',
-                    bodyColor: '#d1d5db',
-                    borderColor: '#374151',
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    padding: 12,
-                }
+                tooltip: tooltipOptions
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, font: { size: 11 } },
-                    grid: { color: '#f3f4f6' },
-                    border: { display: false }
-                },
-                x: {
-                    ticks: { font: { size: 10 }, maxRotation: 45 },
-                    grid: { display: false },
-                    border: { display: false }
-                }
+                y: { beginAtZero: true, grid: gridOptions, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false }, ticks: { maxRotation: 45 } }
             }
         }
     });
 
     // 2. Bar: Sudah vs Belum per Prodi
-    new Chart(document.getElementById('prodiCompareChart'), {
+    const prodiCtx = document.getElementById('prodiCompareChart').getContext('2d');
+    new Chart(prodiCtx, {
         type: 'bar',
         data: {
             labels: @json($prodiLabels),
@@ -501,50 +520,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 {
                     label: 'Sudah Mengisi',
                     data: @json($sudahMengisi),
-                    backgroundColor: emerald,
+                    backgroundColor: createGradient(prodiCtx, emerald, '#10b981'),
                     borderRadius: 6,
                     borderSkipped: false,
-                    barPercentage: 0.55,
-                    categoryPercentage: 0.7,
+                    barPercentage: 0.6,
                 },
                 {
                     label: 'Belum Mengisi',
                     data: @json($belumMengisi),
                     backgroundColor: '#e5e7eb',
+                    hoverBackgroundColor: '#d1d5db',
                     borderRadius: 6,
                     borderSkipped: false,
-                    barPercentage: 0.55,
-                    categoryPercentage: 0.7,
+                    barPercentage: 0.6,
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: { duration: 1500, easing: 'easeOutQuart' },
             plugins: {
-                legend: {
-                    position: 'top',
-                    align: 'end',
-                    labels: { usePointStyle: true, pointStyleWidth: 12, font: { size: 11 }, padding: 16 }
-                },
-                tooltip: {
-                    backgroundColor: '#1f2937',
-                    cornerRadius: 8,
-                    padding: 12,
-                }
+                legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, padding: 20 } },
+                tooltip: tooltipOptions
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, font: { size: 11 } },
-                    grid: { color: '#f3f4f6' },
-                    border: { display: false }
-                },
-                x: {
-                    ticks: { font: { size: 11 } },
-                    grid: { display: false },
-                    border: { display: false }
-                }
+                y: { beginAtZero: true, stacked: true, grid: gridOptions, border: { display: false } },
+                x: { stacked: true, grid: { display: false }, border: { display: false } }
             }
         }
     });
@@ -552,39 +554,44 @@ document.addEventListener('DOMContentLoaded', function() {
     // 3. Dynamic Charts Generation
     const dynamicChartsData = @json($dynamicCharts);
     dynamicChartsData.forEach((chartData, index) => {
+        const ctx = document.getElementById(chartData.id).getContext('2d');
         const type = chartData.labels.length > 5 ? 'bar' : 'doughnut';
         
-        new Chart(document.getElementById(chartData.id), {
+        let bgColors = colors;
+        if (type === 'bar') {
+            bgColors = createGradient(ctx, indigo, blue);
+        }
+
+        new Chart(ctx, {
             type: type,
             data: {
                 labels: chartData.labels,
                 datasets: [{
                     label: 'Total Pemilih',
                     data: chartData.data,
-                    backgroundColor: type === 'bar' ? maroon : colors,
-                    borderColor: type === 'bar' ? maroon : '#fff',
-                    borderWidth: type === 'bar' ? 0 : 2,
+                    backgroundColor: bgColors,
+                    borderColor: '#ffffff',
+                    borderWidth: type === 'doughnut' ? 3 : 0,
                     borderRadius: type === 'bar' ? 6 : 0,
+                    hoverOffset: type === 'doughnut' ? 10 : 0,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 1500, easing: 'easeOutQuart' },
+                cutout: type === 'doughnut' ? '65%' : undefined,
                 plugins: {
                     legend: {
-                        display: type !== 'bar',
+                        display: type === 'doughnut',
                         position: 'right',
-                        labels: { usePointStyle: true, pointStyleWidth: 10, font: { size: 11 } }
+                        labels: { usePointStyle: true, padding: 15, font: { size: 11 } }
                     },
-                    tooltip: {
-                        backgroundColor: '#1f2937',
-                        cornerRadius: 8,
-                        padding: 12,
-                    }
+                    tooltip: tooltipOptions
                 },
                 scales: type === 'bar' ? {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    x: { ticks: { maxRotation: 45, minRotation: 45 } }
+                    y: { beginAtZero: true, grid: gridOptions, border: { display: false } },
+                    x: { grid: { display: false }, border: { display: false }, ticks: { maxRotation: 45 } }
                 } : undefined
             }
         });
@@ -592,14 +599,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 4. Bar: Alumni per Angkatan
     const angkatanData = @json($angkatanData);
-    new Chart(document.getElementById('angkatanChart'), {
+    const angkatanCtx = document.getElementById('angkatanChart').getContext('2d');
+    new Chart(angkatanCtx, {
         type: 'bar',
         data: {
             labels: angkatanData.map(d => d.angkatan),
             datasets: [{
                 label: 'Jumlah Mahasiswa',
                 data: angkatanData.map(d => d.total),
-                backgroundColor: cyan,
+                backgroundColor: createGradient(angkatanCtx, cyan, '#06b6d4'),
                 borderRadius: 8,
                 borderSkipped: false,
                 barPercentage: 0.5,
@@ -608,26 +616,34 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: { duration: 1500, easing: 'easeOutBounce' },
             plugins: {
                 legend: { display: false },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
+                tooltip: tooltipOptions
             },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f3f4f6' }, border: { display: false } },
-                x: { ticks: { font: { size: 12, weight: 500 } }, grid: { display: false }, border: { display: false } }
+                y: { beginAtZero: true, grid: gridOptions, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: 'bold' } } }
             }
         }
     });
 
     // 5. Waktu Tunggu (Bar)
-    new Chart(document.getElementById('waktuTungguChart'), {
+    const wtCtx = document.getElementById('waktuTungguChart').getContext('2d');
+    new Chart(wtCtx, {
         type: 'bar',
         data: {
             labels: @json($waktuTungguLabels),
             datasets: [{
                 label: 'Jumlah Alumni',
                 data: @json($waktuTungguData),
-                backgroundColor: [emerald, cyan, amber, violet, rose],
+                backgroundColor: [
+                    createGradient(wtCtx, emerald, '#10b981'),
+                    createGradient(wtCtx, cyan, '#06b6d4'),
+                    createGradient(wtCtx, amber, '#f59e0b'),
+                    createGradient(wtCtx, violet, '#8b5cf6'),
+                    createGradient(wtCtx, rose, '#f43f5e')
+                ],
                 borderRadius: 8,
                 borderSkipped: false,
                 barPercentage: 0.5,
@@ -636,13 +652,11 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             responsive: true, 
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
-            },
+            animation: { duration: 1500, easing: 'easeOutQuart' },
+            plugins: { legend: { display: false }, tooltip: tooltipOptions },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f3f4f6' }, border: { display: false } },
-                x: { ticks: { font: { size: 11 } }, grid: { display: false }, border: { display: false } }
+                y: { beginAtZero: true, grid: gridOptions, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false } }
             }
         }
     });
@@ -658,52 +672,52 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: skalaEmpty ? ['Belum ada data'] : skalaLabels,
             datasets: [{
                 data: skalaEmpty ? [1] : skalaData,
-                backgroundColor: skalaEmpty ? ['#e5e7eb'] : [emerald, cyan, violet],
-                borderColor: '#fff',
+                backgroundColor: skalaEmpty ? ['#f3f4f6'] : [emerald, cyan, violet, rose, amber],
+                borderColor: '#ffffff',
                 borderWidth: 3,
-                hoverOffset: 8,
+                hoverOffset: 12,
             }]
         },
         options: {
             responsive: true, 
             maintainAspectRatio: false,
             cutout: '65%',
+            animation: { animateScale: true, animateRotate: true, duration: 1500 },
             plugins: {
-                legend: { position: 'right', labels: { usePointStyle: true, pointStyleWidth: 10, font: { size: 12 }, padding: 16 } },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
+                legend: { position: 'right', labels: { usePointStyle: true, padding: 15 } },
+                tooltip: tooltipOptions
             }
         }
     });
 
     // 7. Pendapatan (Bar horizontal)
+    const pendCtx = document.getElementById('pendapatanChart').getContext('2d');
     const pendapatanRaw = @json($pendapatanData);
     const orderedSalaryLabels = ['< 1.000.000','1.000.000 - 5.000.000','5.000.000 - 10.000.000','10.000.000 - 20.000.000','> 20.000.000'];
     const pendapatanLabels = orderedSalaryLabels.filter(l => pendapatanRaw[l] !== undefined);
     const pendapatanValues = pendapatanLabels.map(l => pendapatanRaw[l]);
-    new Chart(document.getElementById('pendapatanChart'), {
+    new Chart(pendCtx, {
         type: 'bar',
         data: {
             labels: pendapatanLabels.length ? pendapatanLabels : ['Belum ada data'],
             datasets: [{
                 label: 'Jumlah Alumni',
                 data: pendapatanValues.length ? pendapatanValues : [0],
-                backgroundColor: [maroon, '#b91c1c', '#dc2626', '#ef4444', '#f87171'],
+                backgroundColor: createGradient(pendCtx, maroon, '#dc2626'),
                 borderRadius: 8,
                 borderSkipped: false,
-                barPercentage: 0.5,
+                barPercentage: 0.6,
             }]
         },
         options: {
             indexAxis: 'y',
             responsive: true, 
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
-            },
+            animation: { duration: 1500, easing: 'easeOutQuart' },
+            plugins: { legend: { display: false }, tooltip: tooltipOptions },
             scales: {
-                x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f3f4f6' }, border: { display: false } },
-                y: { ticks: { font: { size: 11 } }, grid: { display: false }, border: { display: false } }
+                x: { beginAtZero: true, grid: gridOptions, border: { display: false } },
+                y: { grid: { display: false }, border: { display: false } }
             }
         }
     });
@@ -721,19 +735,20 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: kesesuaianEmpty ? ['Belum ada data'] : kesesuaianLabels,
             datasets: [{
                 data: kesesuaianEmpty ? [1] : kesesuaianValues,
-                backgroundColor: kesesuaianEmpty ? ['#e5e7eb'] : kesesuaianColors.slice(0, kesesuaianLabels.length),
-                borderColor: '#fff',
+                backgroundColor: kesesuaianEmpty ? ['#f3f4f6'] : kesesuaianColors.slice(0, kesesuaianLabels.length),
+                borderColor: '#ffffff',
                 borderWidth: 3,
-                hoverOffset: 8,
+                hoverOffset: 12,
             }]
         },
         options: {
             responsive: true, 
             maintainAspectRatio: false,
             cutout: '60%',
+            animation: { animateScale: true, animateRotate: true, duration: 1500 },
             plugins: {
-                legend: { position: 'right', labels: { usePointStyle: true, pointStyleWidth: 10, font: { size: 12 }, padding: 16 } },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
+                legend: { position: 'right', labels: { usePointStyle: true, padding: 15 } },
+                tooltip: tooltipOptions
             }
         }
     });

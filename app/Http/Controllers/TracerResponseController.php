@@ -59,11 +59,29 @@ class TracerResponseController extends Controller
         // Check if user has already filled the active form
         $hasFilledActiveForm = false;
         if ($activeForm) {
-            $query = FormResponse::where('form_id', $activeForm->id)->where('user_id', $user->id);
-            if ($role === 'atasan') {
-                $query->where('evaluated_student_id', $evaluatedStudentId);
+            if ($role === 'alumni' && $student) {
+                $formIds = [];
+                if ($activeForm->form_group) {
+                    $formIds = QuestionnaireForm::where('form_group', $activeForm->form_group)
+                        ->pluck('id')
+                        ->toArray();
+                } else {
+                    $formIds = [$activeForm->id];
+                }
+
+                $hasFilledActiveForm = FormResponse::whereIn('form_id', $formIds)
+                    ->where(function($q) use ($user, $student) {
+                        $q->where('user_id', $user->id)
+                          ->orWhere('guest_student_id', $student->id);
+                    })
+                    ->exists();
+            } else {
+                $query = FormResponse::where('form_id', $activeForm->id)->where('user_id', $user->id);
+                if ($role === 'atasan') {
+                    $query->where('evaluated_student_id', $evaluatedStudentId);
+                }
+                $hasFilledActiveForm = $query->exists();
             }
-            $hasFilledActiveForm = $query->exists();
         }
 
         $needsToSelectStudent = false;
@@ -86,14 +104,33 @@ class TracerResponseController extends Controller
         $form = QuestionnaireForm::with('questions')->findOrFail($validated['form_id']);
 
         // Check if already submitted
-        $query = FormResponse::where('form_id', $form->id)->where('user_id', $user->id);
-        if ($user->role === 'atasan') {
-            $query->where('evaluated_student_id', $request->input('evaluated_student_id'));
+        $student = $user->student;
+        if ($user->role === 'alumni' && $student) {
+            $formIds = [];
+            if ($form->form_group) {
+                $formIds = QuestionnaireForm::where('form_group', $form->form_group)
+                    ->pluck('id')
+                    ->toArray();
+            } else {
+                $formIds = [$form->id];
+            }
+
+            $alreadySubmitted = FormResponse::whereIn('form_id', $formIds)
+                ->where(function($q) use ($user, $student) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('guest_student_id', $student->id);
+                })
+                ->exists();
+        } else {
+            $query = FormResponse::where('form_id', $form->id)->where('user_id', $user->id);
+            if ($user->role === 'atasan') {
+                $query->where('evaluated_student_id', $request->input('evaluated_student_id'));
+            }
+            $alreadySubmitted = $query->exists();
         }
-        $alreadySubmitted = $query->exists();
 
         if ($alreadySubmitted) {
-            return back()->withErrors(['form_id' => 'Anda sudah mengisi kuesioner ini sebelumnya.']);
+            return back()->withErrors(['form_id' => 'Anda sudah mengisi kuesioner dalam kategori ini sebelumnya.']);
         }
 
         // Validate required questions have answers

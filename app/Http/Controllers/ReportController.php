@@ -37,61 +37,73 @@ class ReportController extends Controller
             }
         };
 
-        // Helper: scope formResponse query by active filters (via user → student)
+        // Helper: scope formResponse query by active filters (via user -> student OR guestStudent)
         $responseScope = function ($query) use ($univId, $fakultasId, $prodiId, $angkatan, $formGroup) {
             if ($formGroup) {
                 $query->whereHas('form', fn($q) => $q->where('form_group', $formGroup));
             }
             if ($prodiId || $fakultasId || $univId || $angkatan) {
-                $query->whereHas('user.student', function ($q) use ($univId, $fakultasId, $prodiId, $angkatan) {
-                    if ($prodiId) {
-                        $q->where('prodi_id', $prodiId);
-                    } elseif ($fakultasId) {
-                        $q->whereHas('prodi', fn($q2) => $q2->where('fakultas_id', $fakultasId));
-                    } elseif ($univId) {
-                        $q->whereHas('prodi.fakultas', fn($q2) => $q2->where('id_univs', $univId));
-                    }
-                    if ($angkatan) {
-                        $q->where('angkatan', $angkatan);
-                    }
+                $query->where(function ($q) use ($univId, $fakultasId, $prodiId, $angkatan) {
+                    // Match authenticated user -> student
+                    $q->whereHas('user.student', function ($sq) use ($univId, $fakultasId, $prodiId, $angkatan) {
+                        if ($prodiId) {
+                            $sq->where('prodi_id', $prodiId);
+                        } elseif ($fakultasId) {
+                            $sq->whereHas('prodi', fn($q2) => $q2->where('fakultas_id', $fakultasId));
+                        } elseif ($univId) {
+                            $sq->whereHas('prodi.fakultas', fn($q2) => $q2->where('id_univs', $univId));
+                        }
+                        if ($angkatan) {
+                            $sq->where('angkatan', $angkatan);
+                        }
+                    });
+                    // OR match guest student
+                    $q->orWhereHas('guestStudent', function ($sq) use ($univId, $fakultasId, $prodiId, $angkatan) {
+                        if ($prodiId) {
+                            $sq->where('prodi_id', $prodiId);
+                        } elseif ($fakultasId) {
+                            $sq->whereHas('prodi', fn($q2) => $q2->where('fakultas_id', $fakultasId));
+                        } elseif ($univId) {
+                            $sq->whereHas('prodi.fakultas', fn($q2) => $q2->where('id_univs', $univId));
+                        }
+                        if ($angkatan) {
+                            $sq->where('angkatan', $angkatan);
+                        }
+                    });
                 });
             }
         };
 
         // Helper: scope formResponseAnswer by active filters
-        $answerScope = function ($query) use ($univId, $fakultasId, $prodiId, $angkatan, $formGroup) {
-            if ($formGroup) {
-                $query->whereHas('response.form', fn($q) => $q->where('form_group', $formGroup));
-            }
-            if ($prodiId || $fakultasId || $univId || $angkatan) {
-                $query->whereHas('response.user.student', function ($q) use ($univId, $fakultasId, $prodiId, $angkatan) {
-                    if ($prodiId) {
-                        $q->where('prodi_id', $prodiId);
-                    } elseif ($fakultasId) {
-                        $q->whereHas('prodi', fn($q2) => $q2->where('fakultas_id', $fakultasId));
-                    } elseif ($univId) {
-                        $q->whereHas('prodi.fakultas', fn($q2) => $q2->where('id_univs', $univId));
-                    }
-                    if ($angkatan) {
-                        $q->where('angkatan', $angkatan);
-                    }
-                });
-            }
+        $answerScope = function ($query) use ($responseScope) {
+            $query->whereHas('response', function($q) use ($responseScope) {
+                $responseScope($q);
+            });
         };
 
         // 1. Overview stats
         $totalStudents = Student::when(true, $studentScope)->count();
         $totalResponses = \App\Models\FormResponse::when(true, $responseScope)->count();
 
-        $alumniResponseCount = \App\Models\FormResponse::whereHas('form', function ($q) {
+        // Count alumni who submitted (distinct by either user_id or guest_student_id)
+        $alumniResponses = \App\Models\FormResponse::whereHas('form', function ($q) {
             $q->where('target_role', 'alumni');
-        })->when(true, $responseScope)->distinct('user_id')->count('user_id');
+        })->when(true, $responseScope)->get();
+        
+        $alumniSubmittedCount = $alumniResponses->map(function($r) {
+            return $r->user_id ? 'user_'.$r->user_id : 'guest_'.$r->guest_student_id;
+        })->unique()->count();
 
+        $alumniResponseCount = $alumniSubmittedCount;
         $responseRate = $totalStudents > 0 ? round(($alumniResponseCount / $totalStudents) * 100, 1) : 0;
 
-        $atasanResponseCount = \App\Models\FormResponse::whereHas('form', function ($q) {
+        $atasanResponses = \App\Models\FormResponse::whereHas('form', function ($q) {
             $q->where('target_role', 'atasan');
-        })->when(true, $responseScope)->distinct('user_id')->count('user_id');
+        })->when(true, $responseScope)->get();
+        
+        $atasanResponseCount = $atasanResponses->map(function($r) {
+            return $r->user_id ? 'user_'.$r->user_id : 'guest_'.$r->guest_student_id;
+        })->unique()->count();
 
         // 2. Perbandingan yang sudah mengisi vs belum per Prodi (Bar chart)
         $prodisQuery = Prodi::withCount(['students' => function ($q) use ($studentScope) {
@@ -111,14 +123,26 @@ class ReportController extends Controller
         $sudahMengisi = [];
         $belumMengisi = [];
 
-        $alumniIdsWithResponses = \App\Models\FormResponse::whereHas('form', function ($q) {
-            $q->where('target_role', 'alumni');
-        })->when(true, $responseScope)->pluck('user_id')->toArray();
+        $alumniUserIdsWithResponses = $alumniResponses->whereNotNull('user_id')->pluck('user_id')->toArray();
+        $alumniStudentIdsWithResponses = $alumniResponses->whereNotNull('guest_student_id')->pluck('guest_student_id')->toArray();
 
         foreach ($prodis as $prodi) {
             $prodiLabels[] = $prodi->nama_prodi;
             $filledCount = Student::where('prodi_id', $prodi->id)
-                ->whereIn('user_id', $alumniIdsWithResponses)
+                ->where(function($q) use ($alumniUserIdsWithResponses, $alumniStudentIdsWithResponses) {
+                    if (!empty($alumniUserIdsWithResponses)) {
+                        $q->whereIn('user_id', $alumniUserIdsWithResponses);
+                    }
+                    if (!empty($alumniStudentIdsWithResponses)) {
+                        $q->orWhereIn('id', $alumniStudentIdsWithResponses);
+                    }
+                    if (empty($alumniUserIdsWithResponses) && empty($alumniStudentIdsWithResponses)) {
+                        $q->whereRaw('1 = 0');
+                    }
+                })
+                ->when(true, function($q) use ($angkatan) {
+                    if ($angkatan) $q->where('angkatan', $angkatan);
+                })
                 ->count();
             $sudahMengisi[] = $filledCount;
             $belumMengisi[] = $prodi->students_count - $filledCount;
@@ -156,20 +180,8 @@ class ReportController extends Controller
         foreach ($dynamicQuestions as $q) {
             $answersQuery = \App\Models\FormResponseAnswer::where('question_id', $q->id)
                 ->whereNotNull('answer_text')
-                ->where('answer_text', '!=', '');
-
-            // Apply filter via response → user → student
-            if ($prodiId || $fakultasId || $univId) {
-                $answersQuery->whereHas('response.user.student', function ($sq) use ($univId, $fakultasId, $prodiId) {
-                    if ($prodiId) {
-                        $sq->where('prodi_id', $prodiId);
-                    } elseif ($fakultasId) {
-                        $sq->whereHas('prodi', fn($q2) => $q2->where('fakultas_id', $fakultasId));
-                    } elseif ($univId) {
-                        $sq->whereHas('prodi.fakultas', fn($q2) => $q2->where('id_univs', $univId));
-                    }
-                });
-            }
+                ->where('answer_text', '!=', '')
+                ->when(true, $answerScope);
 
             $answers = $answersQuery->get();
             $counts = [];

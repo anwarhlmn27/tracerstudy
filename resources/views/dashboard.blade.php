@@ -165,11 +165,29 @@
                     @forelse($recentResponses as $response)
                     @php
                         $roleTarget = $response->form->target_role ?? '-';
-                        $namaResponden = $response->user->name ?? '-';
-                        $prodi = '-';
-                        if ($roleTarget === 'alumni' && $response->user->student) {
-                            $namaResponden = $response->user->student->nama_student;
-                            $prodi = $response->user->student->prodi->nama_prodi ?? '-';
+                        $namaResponden = '-';
+                        $subText = '-';
+                        
+                        if ($response->user) {
+                            $namaResponden = $response->user->name ?? '-';
+                            if ($roleTarget === 'alumni' && $response->user->student) {
+                                $namaResponden = $response->user->student->nama_student;
+                                $subText = $response->user->student->prodi->nama_prodi ?? '-';
+                            } else {
+                                $subText = $response->user->email ?? '-';
+                            }
+                        } else {
+                            if ($response->guestStudent) {
+                                if ($roleTarget === 'alumni') {
+                                    $namaResponden = $response->guestStudent->nama_student;
+                                    $subText = $response->guestStudent->prodi->nama_prodi ?? '-';
+                                } else {
+                                    $namaResponden = 'Guest (Atasan)';
+                                    $subText = 'Mengevaluasi: ' . $response->guestStudent->nama_student;
+                                }
+                            } else {
+                                $namaResponden = 'Guest';
+                            }
                         }
                     @endphp
                     <tr>
@@ -180,11 +198,7 @@
                                 </div>
                                 <div>
                                     <div class="font-weight-bold text-dark">{{ $namaResponden }}</div>
-                                    @if($roleTarget === 'alumni')
-                                        <small class="text-muted">{{ $prodi }}</small>
-                                    @else
-                                        <small class="text-muted">{{ $response->user->email ?? '-' }}</small>
-                                    @endif
+                                    <small class="text-muted">{{ $subText }}</small>
                                 </div>
                             </div>
                         </td>
@@ -223,7 +237,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Color palette
+    // 🎨 Color palette & Gradients
     const maroon = '#800000';
     const emerald = '#059669';
     const amber = '#d97706';
@@ -231,18 +245,53 @@ document.addEventListener('DOMContentLoaded', function() {
     const rose = '#e11d48';
     const cyan = '#0891b2';
     
-    Chart.defaults.font.family = "'Roboto', sans-serif";
+    Chart.defaults.font.family = "'Inter', 'Roboto', sans-serif";
     Chart.defaults.color = '#6b7280';
 
+    // Common Tooltip Styling
+    const tooltipOptions = {
+        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+        titleColor: '#f9fafb',
+        bodyColor: '#e5e7eb',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        cornerRadius: 8,
+        padding: 12,
+        boxPadding: 6,
+        usePointStyle: true,
+    };
+
+    // Common Grid Styling
+    const gridOptions = {
+        color: 'rgba(0, 0, 0, 0.04)',
+        borderDash: [5, 5],
+        drawBorder: false,
+    };
+
+    // Helper: Create Gradient
+    function createGradient(ctx, colorStart, colorEnd) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, colorStart);
+        gradient.addColorStop(1, colorEnd);
+        return gradient;
+    }
+
     // 1. Waktu Tunggu (Bar)
-    new Chart(document.getElementById('waktuTungguChart'), {
+    const wtCtx = document.getElementById('waktuTungguChart').getContext('2d');
+    new Chart(wtCtx, {
         type: 'bar',
         data: {
             labels: @json($waktuTungguLabels),
             datasets: [{
                 label: 'Jumlah Alumni',
                 data: @json($waktuTungguData),
-                backgroundColor: [emerald, cyan, amber, violet, rose],
+                backgroundColor: [
+                    createGradient(wtCtx, emerald, '#10b981'),
+                    createGradient(wtCtx, cyan, '#06b6d4'),
+                    createGradient(wtCtx, amber, '#f59e0b'),
+                    createGradient(wtCtx, violet, '#8b5cf6'),
+                    createGradient(wtCtx, rose, '#f43f5e')
+                ],
                 borderRadius: 8,
                 borderSkipped: false,
                 barPercentage: 0.5,
@@ -251,13 +300,11 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             responsive: true, 
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
-            },
+            animation: { duration: 1500, easing: 'easeOutQuart' },
+            plugins: { legend: { display: false }, tooltip: tooltipOptions },
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f3f4f6' }, border: { display: false } },
-                x: { ticks: { font: { size: 11 } }, grid: { display: false }, border: { display: false } }
+                y: { beginAtZero: true, grid: gridOptions, border: { display: false } },
+                x: { grid: { display: false }, border: { display: false } }
             }
         }
     });
@@ -273,52 +320,52 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: skalaEmpty ? ['Belum ada data'] : skalaLabels,
             datasets: [{
                 data: skalaEmpty ? [1] : skalaData,
-                backgroundColor: skalaEmpty ? ['#e5e7eb'] : [emerald, cyan, violet],
-                borderColor: '#fff',
+                backgroundColor: skalaEmpty ? ['#f3f4f6'] : [emerald, cyan, violet],
+                borderColor: '#ffffff',
                 borderWidth: 3,
-                hoverOffset: 8,
+                hoverOffset: 12,
             }]
         },
         options: {
             responsive: true, 
             maintainAspectRatio: false,
             cutout: '65%',
+            animation: { animateScale: true, animateRotate: true, duration: 1500 },
             plugins: {
-                legend: { position: 'right', labels: { usePointStyle: true, pointStyleWidth: 10, font: { size: 12 }, padding: 16 } },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
+                legend: { position: 'right', labels: { usePointStyle: true, padding: 15 } },
+                tooltip: tooltipOptions
             }
         }
     });
 
     // 3. Pendapatan (Bar horizontal)
+    const pendCtx = document.getElementById('pendapatanChart').getContext('2d');
     const pendapatanRaw = @json($pendapatanData);
     const orderedSalaryLabels = ['< 1.000.000','1.000.000 - 5.000.000','5.000.000 - 10.000.000','10.000.000 - 20.000.000','> 20.000.000'];
     const pendapatanLabels = orderedSalaryLabels.filter(l => pendapatanRaw[l] !== undefined);
     const pendapatanValues = pendapatanLabels.map(l => pendapatanRaw[l]);
-    new Chart(document.getElementById('pendapatanChart'), {
+    new Chart(pendCtx, {
         type: 'bar',
         data: {
             labels: pendapatanLabels.length ? pendapatanLabels : ['Belum ada data'],
             datasets: [{
                 label: 'Jumlah Alumni',
                 data: pendapatanValues.length ? pendapatanValues : [0],
-                backgroundColor: [maroon, '#b91c1c', '#dc2626', '#ef4444', '#f87171'],
+                backgroundColor: createGradient(pendCtx, maroon, '#dc2626'),
                 borderRadius: 8,
                 borderSkipped: false,
-                barPercentage: 0.5,
+                barPercentage: 0.6,
             }]
         },
         options: {
             indexAxis: 'y',
             responsive: true, 
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
-            },
+            animation: { duration: 1500, easing: 'easeOutQuart' },
+            plugins: { legend: { display: false }, tooltip: tooltipOptions },
             scales: {
-                x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f3f4f6' }, border: { display: false } },
-                y: { ticks: { font: { size: 11 } }, grid: { display: false }, border: { display: false } }
+                x: { beginAtZero: true, grid: gridOptions, border: { display: false } },
+                y: { grid: { display: false }, border: { display: false } }
             }
         }
     });
@@ -336,19 +383,20 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: kesesuaianEmpty ? ['Belum ada data'] : kesesuaianLabels,
             datasets: [{
                 data: kesesuaianEmpty ? [1] : kesesuaianValues,
-                backgroundColor: kesesuaianEmpty ? ['#e5e7eb'] : kesesuaianColors.slice(0, kesesuaianLabels.length),
-                borderColor: '#fff',
+                backgroundColor: kesesuaianEmpty ? ['#f3f4f6'] : kesesuaianColors.slice(0, kesesuaianLabels.length),
+                borderColor: '#ffffff',
                 borderWidth: 3,
-                hoverOffset: 8,
+                hoverOffset: 12,
             }]
         },
         options: {
             responsive: true, 
             maintainAspectRatio: false,
             cutout: '60%',
+            animation: { animateScale: true, animateRotate: true, duration: 1500 },
             plugins: {
-                legend: { position: 'right', labels: { usePointStyle: true, pointStyleWidth: 10, font: { size: 12 }, padding: 16 } },
-                tooltip: { backgroundColor: '#1f2937', cornerRadius: 8, padding: 12 }
+                legend: { position: 'right', labels: { usePointStyle: true, padding: 15 } },
+                tooltip: tooltipOptions
             }
         }
     });

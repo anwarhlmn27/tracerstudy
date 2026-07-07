@@ -440,13 +440,15 @@ $(document).ready(function() {
             const pId = $(this.options[this.selectedIndex]).attr('data-id');
             resetAlumniSelect();
             if (!pId) return;
-            $.getJSON('/api/students', { prodi_id: pId }, function(data) {
+            $.getJSON('/api/students', { prodi_id: pId, form_id: '{{ $activeForm->id ?? "" }}' }, function(data) {
                 $(alumniSelect).html('<option value="">-- Pilih Nama Anda --</option>');
                 $.each(data, function(i, s) {
-                    $(alumniSelect).append(
-                        $('<option>').val(s.nama_student).attr('data-id', s.id)
-                            .text(s.nama_student + ' (' + s.nim + ')')
-                    );
+                    const label = s.nama_student + ' (' + s.nim + ')' + (s.has_submitted ? ' - Sudah Mengisi' : '');
+                    const opt = $('<option>').val(s.nama_student).attr('data-id', s.id).text(label);
+                    if (s.has_submitted) {
+                        opt.prop('disabled', true).attr('disabled', 'disabled');
+                    }
+                    $(alumniSelect).append(opt);
                 });
                 $(alumniSelect).prop('disabled', false);
                 if (alumniTomSelect) alumniTomSelect.destroy();

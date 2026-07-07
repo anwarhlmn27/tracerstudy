@@ -553,13 +553,17 @@
 
                 if (!prodiId) return;
 
-                $.getJSON('/api/students', { prodi_id: prodiId }, function(data) {
+                $.getJSON('/api/students', { prodi_id: prodiId, form_id: '{{ $activeForm->id ?? "" }}' }, function(data) {
                     $(alumniSelect).html('<option value="">-- Pilih Nama Alumni --</option>');
                     $.each(data, function(i, s) {
+                        const label = s.nama_student + ' (' + s.nim + ')' + (s.has_submitted ? ' - Sudah Mengisi' : '');
                         const opt = $('<option></option>')
                             .val(s.nama_student)
                             .attr('data-id', s.id)
-                            .text(s.nama_student + ' (' + s.nim + ')');
+                            .text(label);
+                        if (s.has_submitted) {
+                            opt.prop('disabled', true).attr('disabled', 'disabled');
+                        }
                         $(alumniSelect).append(opt);
                     });
                     $(alumniSelect).prop('disabled', false);

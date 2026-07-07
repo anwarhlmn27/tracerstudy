@@ -205,7 +205,7 @@ class TracerResponseTest extends TestCase
             ]
         ]);
 
-        $response->assertSessionHasErrors(['form_id' => 'Anda sudah mengisi kuesioner ini sebelumnya.']);
+        $response->assertSessionHasErrors(['form_id' => 'Anda sudah mengisi kuesioner dalam kategori ini sebelumnya.']);
         $this->assertEquals(1, FormResponse::where('form_id', $form->id)->where('user_id', $user->id)->count());
     }
 

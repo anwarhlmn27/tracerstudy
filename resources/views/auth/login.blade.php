@@ -17,7 +17,7 @@
     <!-- Extracted Views CSS -->
     <link href="{{ asset('css/custom-views.css') }}" rel="stylesheet">
 </head>
-<body>
+<body class="login-page">
 
     <div class="login-container">
         <div class="row no-gutters h-100 min-vh-50">

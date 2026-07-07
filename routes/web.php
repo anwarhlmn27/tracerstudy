@@ -33,7 +33,40 @@ Route::get('/api/prodis', function(\Illuminate\Http\Request $request) {
     return response()->json($query->orderBy('nama_prodi', 'asc')->get(['id', 'nama_prodi']));
 });
 Route::get('/api/students', function(\Illuminate\Http\Request $request) {
-    return response()->json(\App\Models\Student::where('prodi_id', $request->query('prodi_id'))->orderBy('nama_student', 'asc')->get(['id', 'nama_student', 'nim']));
+    $prodiId = $request->query('prodi_id');
+    $formId = $request->query('form_id');
+
+    $students = \App\Models\Student::where('prodi_id', $prodiId)
+        ->orderBy('nama_student', 'asc')
+        ->get(['id', 'nama_student', 'nim']);
+
+    if ($formId) {
+        $form = \App\Models\QuestionnaireForm::find($formId);
+        if ($form) {
+            $formIds = [];
+            if ($form->form_group) {
+                $formIds = \App\Models\QuestionnaireForm::where('form_group', $form->form_group)
+                    ->pluck('id')
+                    ->toArray();
+            } else {
+                $formIds = [$form->id];
+            }
+
+            $submittedStudentIds = \App\Models\FormResponse::whereIn('form_responses.form_id', $formIds)
+                ->leftJoin('students', 'form_responses.user_id', '=', 'students.user_id')
+                ->selectRaw('COALESCE(form_responses.guest_student_id, students.id) as student_id')
+                ->pluck('student_id')
+                ->filter()
+                ->unique()
+                ->toArray();
+
+            foreach ($students as $student) {
+                $student->has_submitted = in_array($student->id, $submittedStudentIds);
+            }
+        }
+    }
+
+    return response()->json($students);
 });
 
 Route::middleware('auth')->group(function () {
@@ -161,9 +194,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/email/send', [\App\Http\Controllers\EmailBlastController::class, 'send'])->name('email.send');
 
         // Settings
-        Route::get('/settings', function () {
-            return view('settings');
-        })->name('settings');
+        Route::get('/settings', [\App\Http\Controllers\SettingController::class, 'index'])->name('settings');
+        Route::post('/settings', [\App\Http\Controllers\SettingController::class, 'update'])->name('settings.update');
     });
 
     // Admin only routes

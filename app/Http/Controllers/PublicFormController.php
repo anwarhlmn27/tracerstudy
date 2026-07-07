@@ -88,13 +88,28 @@ class PublicFormController extends Controller
             }
         }
 
-        // Check duplicate by student if found, or by session
+        // Check duplicate by student if found
         if ($guestStudentId) {
-            $alreadySubmitted = FormResponse::where('form_id', $form->id)
-                ->where('guest_student_id', $guestStudentId)
+            $formIds = [];
+            if ($form->form_group) {
+                $formIds = QuestionnaireForm::where('form_group', $form->form_group)
+                    ->pluck('id')
+                    ->toArray();
+            } else {
+                $formIds = [$form->id];
+            }
+
+            $alreadySubmitted = FormResponse::whereIn('form_id', $formIds)
+                ->where(function($q) use ($guestStudentId) {
+                    $q->where('guest_student_id', $guestStudentId)
+                      ->orWhereHas('user.student', function($sq) use ($guestStudentId) {
+                          $sq->where('id', $guestStudentId);
+                      });
+                })
                 ->exists();
+
             if ($alreadySubmitted) {
-                return back()->withErrors(['form_id' => 'Alumni ini sudah pernah mengisi kuesioner ini.']);
+                return back()->withErrors(['form_id' => 'Alumni ini sudah pernah mengisi kuesioner dalam kategori ini.']);
             }
         }
 

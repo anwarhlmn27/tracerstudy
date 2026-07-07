@@ -44,7 +44,7 @@
     </div>
 
     <!-- System Information -->
-    <div class="card settings-card mb-4">
+    <!-- <div class="card settings-card mb-4">
         <div class="card-body p-4">
             <div class="border-bottom pb-3 mb-4">
                 <h5 class="font-weight-bold text-dark mb-1">Informasi Sistem</h5>
@@ -78,10 +78,10 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Access Control Info -->
-    <div class="card settings-card">
+    <!-- <div class="card settings-card">
         <div class="card-body p-4">
             <div class="border-bottom pb-3 mb-4">
                 <h5 class="font-weight-bold text-dark mb-1">Hak Akses Role</h5>
@@ -148,7 +148,59 @@
                 </table>
             </div>
         </div>
+    </div> -->
+
+    @if(Auth::user()->role === 'admin')
+    <!-- Appearance Settings -->
+    <div class="card settings-card mt-4 mb-4">
+        <div class="card-body p-4">
+            <div class="border-bottom pb-3 mb-4">
+                <h5 class="font-weight-bold text-dark mb-1">Pengaturan Tampilan (Appearance)</h5>
+                <p class="text-muted small mb-0">Sesuaikan warna dan font antarmuka aplikasi</p>
+            </div>
+            
+            <form action="{{ route('settings.update') }}" method="POST">
+                @csrf
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="font-weight-bold text-dark small mb-1" for="sidebar_color">Warna Sidebar</label>
+                        <input type="color" class="form-control" id="sidebar_color" name="sidebar_color" value="{{ $settings['sidebar_color'] ?? '#800000' }}" style="height: 40px; padding: 2px;">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="font-weight-bold text-dark small mb-1" for="navbar_color">Warna Navbar (Header)</label>
+                        <input type="color" class="form-control" id="navbar_color" name="navbar_color" value="{{ $settings['navbar_color'] ?? '#ffffff' }}" style="height: 40px; padding: 2px;">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="font-weight-bold text-dark small mb-1" for="contentbar_color">Warna Background Konten</label>
+                        <input type="color" class="form-control" id="contentbar_color" name="contentbar_color" value="{{ $settings['contentbar_color'] ?? '#f7f8fa' }}" style="height: 40px; padding: 2px;">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="font-weight-bold text-dark small mb-1" for="footer_color">Warna Background Footer</label>
+                        <input type="color" class="form-control" id="footer_color" name="footer_color" value="{{ $settings['footer_color'] ?? '#ffffff' }}" style="height: 40px; padding: 2px;">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="font-weight-bold text-dark small mb-1" for="font_family">Font Family</label>
+                        <select class="form-control browser-default custom-select" id="font_family" name="font_family" style="border-radius: 8px;">
+                            <option value="'Roboto', sans-serif" {{ ($settings['font_family'] ?? '') == "'Roboto', sans-serif" ? 'selected' : '' }}>Roboto</option>
+                            <option value="'Inter', sans-serif" {{ ($settings['font_family'] ?? '') == "'Inter', sans-serif" ? 'selected' : '' }}>Inter</option>
+                            <option value="'Open Sans', sans-serif" {{ ($settings['font_family'] ?? '') == "'Open Sans', sans-serif" ? 'selected' : '' }}>Open Sans</option>
+                            <option value="'Poppins', sans-serif" {{ ($settings['font_family'] ?? '') == "'Poppins', sans-serif" ? 'selected' : '' }}>Poppins</option>
+                            <option value="'Nunito', sans-serif" {{ ($settings['font_family'] ?? '') == "'Nunito', sans-serif" ? 'selected' : '' }}>Nunito</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="font-weight-bold text-dark small mb-1" for="font_color">Warna Teks (Default)</label>
+                        <input type="color" class="form-control" id="font_color" name="font_color" value="{{ $settings['font_color'] ?? '#212529' }}" style="height: 40px; padding: 2px;">
+                    </div>
+                </div>
+                <div class="mt-3 text-right">
+                    <button type="submit" class="btn btn-danger font-weight-bold" style="border-radius: 8px;">Simpan Pengaturan</button>
+                </div>
+            </form>
+        </div>
     </div>
+    @endif
+
 
 </div>
 @endsection

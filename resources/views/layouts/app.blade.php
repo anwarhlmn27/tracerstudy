@@ -21,6 +21,30 @@
     <!-- Extracted Views CSS -->
     <link href="{{ asset('css/custom-views.css') }}" rel="stylesheet">
     @stack('styles')
+
+    @php
+        $appSettings = \Illuminate\Support\Facades\Schema::hasTable('settings') 
+            ? \App\Models\Setting::pluck('value', 'key')->toArray() 
+            : [];
+    @endphp
+    <style>
+        body {
+            @if(isset($appSettings['font_family'])) font-family: {!! $appSettings['font_family'] !!} !important; @endif
+            @if(isset($appSettings['font_color'])) color: {{ $appSettings['font_color'] }} !important; @endif
+        }
+        #sidebar {
+            @if(isset($appSettings['sidebar_color'])) background-color: {{ $appSettings['sidebar_color'] }} !important; @endif
+        }
+        #main-header {
+            @if(isset($appSettings['navbar_color'])) background-color: {{ $appSettings['navbar_color'] }} !important; @endif
+        }
+        #main-content {
+            @if(isset($appSettings['contentbar_color'])) background-color: {{ $appSettings['contentbar_color'] }} !important; @endif
+        }
+        footer {
+            @if(isset($appSettings['footer_color'])) background-color: {{ $appSettings['footer_color'] }} !important; @endif
+        }
+    </style>
 </head>
 <body>
     <!-- Preloader -->
