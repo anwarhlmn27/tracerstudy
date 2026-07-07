@@ -1,0 +1,58 @@
+/* Custom flat Material Design style for all inputs, selects, and textareas */
+.form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+select.form-control,
+textarea.form-control {
+    border: none !important;
+    border-bottom: 1px solid #ced4da !important;
+    border-radius: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+select.form-control:focus,
+textarea.form-control:focus {
+    border-bottom: 2px solid #800000 !important; /* Maroon focus color matching the theme */
+    box-shadow: none !important;
+}
+
+/* Validation styles */
+.form-control.is-invalid,
+.was-validated .form-control:invalid {
+    border-bottom: 1px solid #dc3545 !important;
+}
+.form-control.is-invalid:focus,
+.was-validated .form-control:invalid:focus {
+    border-bottom: 2px solid #dc3545 !important;
+}
+
+.form-control.is-valid,
+.was-validated .form-control:valid {
+    border-bottom: 1px solid #28a745 !important;
+}
+.form-control.is-valid:focus,
+.was-validated .form-control:valid:focus {
+    border-bottom: 2px solid #28a745 !important;
+}
+
+/* Style select dropdown arrow nicely */
+select.form-control {
+    padding-bottom: 5px !important;
+}
