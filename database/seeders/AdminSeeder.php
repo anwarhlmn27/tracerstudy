@@ -16,38 +16,8 @@ class AdminSeeder extends Seeder
             [
                 'id' => Str::uuid(),
                 'name' => 'Administrator',
-                'password' => Hash::make('Password#@!234'),
+                'password' => Hash::make('password@234'),
                 'role' => 'admin',
-            ]
-        );
-
-        User::updateOrCreate(
-            ['email' => 'alumni@tracer.ac.id'],
-            [
-                'id' => Str::uuid(),
-                'name' => 'Alumni User',
-                'password' => Hash::make('password123'),
-                'role' => 'alumni',
-            ]
-        );
-
-        User::updateOrCreate(
-            ['email' => 'dosen@tracer.ac.id'],
-            [
-                'id' => Str::uuid(),
-                'name' => 'Dosen User',
-                'password' => Hash::make('password123'),
-                'role' => 'dosen',
-            ]
-        );
-
-        User::updateOrCreate(
-            ['email' => 'atasan@tracer.ac.id'],
-            [
-                'id' => Str::uuid(),
-                'name' => 'Atasan User',
-                'password' => Hash::make('password123'),
-                'role' => 'atasan',
             ]
         );
     }
