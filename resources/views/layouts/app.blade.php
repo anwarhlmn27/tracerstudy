@@ -13,13 +13,13 @@
     <!-- Material Design Bootstrap -->
     <link href="{{ asset('assets/css/mdb.min.css') }}" rel="stylesheet">
     <!-- Custom styles -->
-    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/style.css') }}?v={{ time() }}" rel="stylesheet">
 
     <!-- SweetAlert2 CSS (CDN) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
     <!-- Extracted Views CSS -->
-    <link href="{{ asset('css/custom-views.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/custom-views.css') }}?v={{ time() }}" rel="stylesheet">
     @stack('styles')
 
     @php
