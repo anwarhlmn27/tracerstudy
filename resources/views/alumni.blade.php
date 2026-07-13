@@ -524,7 +524,7 @@
         document.getElementById('edit_tempat_kerja').value = tempatKerja || '';
         document.getElementById('edit_response_rate').value = responseRate || '';
         document.getElementById('edit_waktu_tunggu_kerja').value = waktuTungguKerja || '';
-        document.getElementById('editForm').action = '/alumni/' + id;
+        document.getElementById('editForm').action = '{{ url("alumni") }}/' + id;
         toggleEditCompanyFields();
         $('#editAlumniModal').modal('show');
     }
@@ -543,7 +543,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.getElementById('deleteForm');
-                form.action = '/alumni/' + id;
+                form.action = '{{ url("alumni") }}/' + id;
                 form.submit();
             }
         });

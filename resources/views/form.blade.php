@@ -475,7 +475,7 @@
             // Case A: University dropdown is present
             if (univSelect) {
                 // Load universities
-                $.getJSON('/api/univs', function(data) {
+                $.getJSON('{{ url("/api/univs") }}', function(data) {
                     $.each(data, function(i, u) {
                         const opt = $('<option></option>')
                             .val(u.nama_univ)
@@ -496,7 +496,7 @@
 
                     if (!univId) return;
 
-                    $.getJSON('/api/fakultas', { univ_id: univId }, function(data) {
+                    $.getJSON('{{ url("/api/fakultas") }}', { univ_id: univId }, function(data) {
                         $.each(data, function(i, f) {
                             const opt = $('<option></option>')
                                 .val(f.nama_fakultas)
@@ -518,7 +518,7 @@
 
                     if (!fakultasId) return;
 
-                    $.getJSON('/api/prodis', { fakultas_id: fakultasId }, function(data) {
+                    $.getJSON('{{ url("/api/prodis") }}', { fakultas_id: fakultasId }, function(data) {
                         $.each(data, function(i, p) {
                             const opt = $('<option></option>')
                                 .val(p.nama_prodi)
@@ -532,7 +532,7 @@
             } else {
                 // Case B: University dropdown is NOT present, load all prodis on page load
                 $(prodiSelect).html('<option value="">-- Pilih Program Studi --</option>').prop('disabled', true);
-                $.getJSON('/api/prodis', function(data) {
+                $.getJSON('{{ url("/api/prodis") }}', function(data) {
                     $.each(data, function(i, p) {
                         const opt = $('<option></option>')
                             .val(p.nama_prodi)
@@ -553,7 +553,7 @@
 
                 if (!prodiId) return;
 
-                $.getJSON('/api/students', { prodi_id: prodiId, form_id: '{{ $activeForm->id ?? "" }}' }, function(data) {
+                $.getJSON('{{ url("/api/students") }}', { prodi_id: prodiId, form_id: '{{ $activeForm->id ?? "" }}' }, function(data) {
                     $(alumniSelect).html('<option value="">-- Pilih Nama Alumni --</option>');
                     $.each(data, function(i, s) {
                         const label = s.nama_student + ' (' + s.nim + ')' + (s.has_submitted ? ' - Sudah Mengisi' : '');

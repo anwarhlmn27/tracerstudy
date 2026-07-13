@@ -392,7 +392,7 @@ $(document).ready(function() {
         // Case A: University dropdown is present
         if (univSelect) {
             // Load universities on page load
-            $.getJSON('/api/univs', function(data) {
+            $.getJSON('{{ url("/api/univs") }}', function(data) {
                 $.each(data, function(i, u) {
                     $(univSelect).append($('<option>').val(u.nama_univ).attr('data-id', u.id).text(u.nama_univ));
                 });
@@ -404,7 +404,7 @@ $(document).ready(function() {
                 $(prodiSelect).html('<option value="">-- Pilih Program Studi --</option>').prop('disabled', true);
                 resetAlumniSelect();
                 if (!univId) return;
-                $.getJSON('/api/fakultas', { univ_id: univId }, function(data) {
+                $.getJSON('{{ url("/api/fakultas") }}', { univ_id: univId }, function(data) {
                     $.each(data, function(i, f) {
                         $(fakultasSelect).append($('<option>').val(f.nama_fakultas).attr('data-id', f.id).text(f.nama_fakultas));
                     });
@@ -417,7 +417,7 @@ $(document).ready(function() {
                 $(prodiSelect).html('<option value="">-- Pilih Program Studi --</option>').prop('disabled', true);
                 resetAlumniSelect();
                 if (!fId) return;
-                $.getJSON('/api/prodis', { fakultas_id: fId }, function(data) {
+                $.getJSON('{{ url("/api/prodis") }}', { fakultas_id: fId }, function(data) {
                     $.each(data, function(i, p) {
                         $(prodiSelect).append($('<option>').val(p.nama_prodi).attr('data-id', p.id).text(p.nama_prodi));
                     });
@@ -427,7 +427,7 @@ $(document).ready(function() {
         } else {
             // Case B: University dropdown is NOT present, load all prodis on page load
             $(prodiSelect).html('<option value="">-- Pilih Program Studi --</option>').prop('disabled', true);
-            $.getJSON('/api/prodis', function(data) {
+            $.getJSON('{{ url("/api/prodis") }}', function(data) {
                 $.each(data, function(i, p) {
                     $(prodiSelect).append($('<option>').val(p.nama_prodi).attr('data-id', p.id).text(p.nama_prodi));
                 });
@@ -440,7 +440,7 @@ $(document).ready(function() {
             const pId = $(this.options[this.selectedIndex]).attr('data-id');
             resetAlumniSelect();
             if (!pId) return;
-            $.getJSON('/api/students', { prodi_id: pId, form_id: '{{ $activeForm->id ?? "" }}' }, function(data) {
+            $.getJSON('{{ url("/api/students") }}', { prodi_id: pId, form_id: '{{ $activeForm->id ?? "" }}' }, function(data) {
                 $(alumniSelect).html('<option value="">-- Pilih Nama Anda --</option>');
                 $.each(data, function(i, s) {
                     const label = s.nama_student + ' (' + s.nim + ')' + (s.has_submitted ? ' - Sudah Mengisi' : '');

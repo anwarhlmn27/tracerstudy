@@ -210,7 +210,7 @@
         document.getElementById('edit_address').value = address;
         document.getElementById('edit_email').value = email;
         document.getElementById('edit_website').value = website;
-        document.getElementById('editForm').action = '/univs/' + id;
+        document.getElementById('editForm').action = '{{ url("univs") }}/' + id;
         $('#editUnivModal').modal('show');
     }
 
@@ -240,7 +240,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.getElementById('deleteForm');
-                form.action = '/univs/' + id;
+                form.action = '{{ url("univs") }}/' + id;
                 form.submit();
             }
         });

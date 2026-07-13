@@ -199,7 +199,7 @@
         document.getElementById('edit_kode_prodi').value = kode;
         document.getElementById('edit_short_name').value = shortName;
         document.getElementById('edit_fakultas_id').value = fakultasId || '';
-        document.getElementById('editForm').action = '/prodi/' + id;
+        document.getElementById('editForm').action = '{{ url("prodi") }}/' + id;
         $('#editProdiModal').modal('show');
     }
 
@@ -229,7 +229,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.getElementById('deleteForm');
-                form.action = '/prodi/' + id;
+                form.action = '{{ url("prodi") }}/' + id;
                 form.submit();
             }
         });

@@ -208,7 +208,7 @@
         document.getElementById('edit_kode_fakultas').value = kode;
         document.getElementById('edit_id_univs').value = univId;
         document.getElementById('edit_short_name').value = shortName;
-        document.getElementById('editForm').action = '/fakultas/' + id;
+        document.getElementById('editForm').action = '{{ url("fakultas") }}/' + id;
         $('#editFakultasModal').modal('show');
     }
 
@@ -238,7 +238,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.getElementById('deleteForm');
-                form.action = '/fakultas/' + id;
+                form.action = '{{ url("fakultas") }}/' + id;
                 form.submit();
             }
         });
