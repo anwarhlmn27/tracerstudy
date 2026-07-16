@@ -53,6 +53,7 @@ class MasterFormController extends Controller
             'questions.*.options.*' => ['nullable', 'string'],
             'questions.*.go_to_sections' => ['nullable', 'array'],
             'questions.*.go_to_sections.*' => ['nullable', 'integer'],
+            'questions.*.has_others' => ['sometimes', 'boolean'],
         ]);
 
         $form = QuestionnaireForm::create([
@@ -134,6 +135,7 @@ class MasterFormController extends Controller
                 'sort_order' => $sortOrder++,
                 'section_id' => $questionData['section_id'] ?? 1,
                 'section_title' => $questionData['section_title'] ?? null,
+                'has_others' => $questionData['has_others'] ?? false,
             ]);
 
             // Create options for radio/select/checkbox/linear_scale/rating
@@ -191,6 +193,7 @@ class MasterFormController extends Controller
             'questions.*.options.*' => ['nullable', 'string'],
             'questions.*.go_to_sections' => ['nullable', 'array'],
             'questions.*.go_to_sections.*' => ['nullable', 'integer'],
+            'questions.*.has_others' => ['sometimes', 'boolean'],
         ]);
 
         $form->update([
@@ -274,6 +277,7 @@ class MasterFormController extends Controller
                 'sort_order' => $sortOrder++,
                 'section_id' => $questionData['section_id'] ?? 1,
                 'section_title' => $questionData['section_title'] ?? null,
+                'has_others' => $questionData['has_others'] ?? false,
             ]);
 
             if (in_array($questionData['type'], ['radio', 'select', 'checkbox', 'linear_scale', 'rating']) && !empty($questionData['options'])) {

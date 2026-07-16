@@ -246,11 +246,101 @@ class PublicSurveyTest extends TestCase
         // Call the API
         $response = $this->getJson("/api/students?prodi_id={$this->prodi->id}&form_id={$form->id}");
 
-        $response->assertStatus(200);
         $response->assertJsonFragment([
             'id' => $this->student->id,
             'nama_student' => 'Budi Santoso',
             'has_submitted' => true
         ]);
+    }
+
+    public function test_can_submit_public_survey_with_others_option(): void
+    {
+        $form = QuestionnaireForm::create([
+            'id' => Str::uuid(),
+            'title' => 'Exit Survey (After Yudisium)',
+            'target_role' => 'alumni',
+            'is_active' => true
+        ]);
+
+        $qAlumni = FormQuestion::create([
+            'id' => Str::uuid(),
+            'form_id' => $form->id,
+            'question_text' => 'Pilih Nama Alumni',
+            'question_type' => 'select',
+            'is_required' => true,
+            'sort_order' => 1
+        ]);
+
+        $qRadio = FormQuestion::create([
+            'id' => Str::uuid(),
+            'form_id' => $form->id,
+            'question_text' => 'Mengapa memilih kampus ini?',
+            'question_type' => 'radio',
+            'is_required' => true,
+            'has_others' => true,
+            'sort_order' => 2
+        ]);
+
+        // Submit with Others selected
+        $response = $this->post('/kuesioner', [
+            'form_id' => $form->id,
+            'answers' => [
+                $qAlumni->id => 'Budi Santoso',
+                $qRadio->id => 'Others'
+            ],
+            'answers_others' => [
+                $qRadio->id => 'Hobi Saya Sendiri'
+            ]
+        ]);
+
+        $response->assertRedirect(route('public.form'));
+        
+        $this->assertDatabaseHas('form_response_answers', [
+            'question_id' => $qRadio->id,
+            'answer_text' => 'Hobi Saya Sendiri'
+        ]);
+    }
+
+    public function test_fails_when_others_is_selected_but_empty_on_required_question(): void
+    {
+        $form = QuestionnaireForm::create([
+            'id' => Str::uuid(),
+            'title' => 'Exit Survey (After Yudisium)',
+            'target_role' => 'alumni',
+            'is_active' => true
+        ]);
+
+        $qAlumni = FormQuestion::create([
+            'id' => Str::uuid(),
+            'form_id' => $form->id,
+            'question_text' => 'Pilih Nama Alumni',
+            'question_type' => 'select',
+            'is_required' => true,
+            'sort_order' => 1
+        ]);
+
+        $qRadio = FormQuestion::create([
+            'id' => Str::uuid(),
+            'form_id' => $form->id,
+            'question_text' => 'Mengapa memilih kampus ini?',
+            'question_type' => 'radio',
+            'is_required' => true,
+            'has_others' => true,
+            'sort_order' => 2
+        ]);
+
+        // Submit with Others selected but empty text input
+        $response = $this->post('/kuesioner', [
+            'form_id' => $form->id,
+            'answers' => [
+                $qAlumni->id => 'Budi Santoso',
+                $qRadio->id => 'Others'
+            ],
+            'answers_others' => [
+                $qRadio->id => ''
+            ]
+        ]);
+
+        $response->assertSessionHasErrors(['answers.' . $qRadio->id]);
     }
 }

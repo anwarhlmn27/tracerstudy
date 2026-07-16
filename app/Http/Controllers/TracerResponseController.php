@@ -142,6 +142,19 @@ class TracerResponseController extends Controller
                     }
                 } else {
                     $answer = $validated['answers'][$question->id] ?? null;
+                    if ($question->question_type === 'radio' && $answer === 'Others') {
+                        $answer = $request->input("answers_others.{$question->id}");
+                    } elseif ($question->question_type === 'checkbox' && is_array($answer)) {
+                        if (in_array('Others', $answer)) {
+                            $otherVal = $request->input("answers_others.{$question->id}");
+                            if (!empty($otherVal)) {
+                                $idx = array_search('Others', $answer);
+                                $answer[$idx] = $otherVal;
+                            } else {
+                                $answer = array_filter($answer, function($val) { return $val !== 'Others'; });
+                            }
+                        }
+                    }
                     if (empty($answer) && $answer !== '0') {
                         return back()->withErrors(['answers.' . $question->id => 'Pertanyaan "' . $question->question_text . '" wajib diisi.'])->withInput();
                     }
@@ -177,9 +190,21 @@ class TracerResponseController extends Controller
                 }
             } else {
                 $answerValue = $validated['answers'][$question->id] ?? null;
+                if ($question->question_type === 'radio' && $answerValue === 'Others') {
+                    $answerValue = $request->input("answers_others.{$question->id}") ?: 'Lainnya';
+                }
 
                 // For checkbox, join multiple values
                 if ($question->question_type === 'checkbox' && is_array($answerValue)) {
+                    if (in_array('Others', $answerValue)) {
+                        $otherVal = $request->input("answers_others.{$question->id}");
+                        if (!empty($otherVal)) {
+                            $idx = array_search('Others', $answerValue);
+                            $answerValue[$idx] = $otherVal;
+                        } else {
+                            $answerValue = array_filter($answerValue, function($val) { return $val !== 'Others'; });
+                        }
+                    }
                     $answerValue = implode(', ', $answerValue);
                 }
             }

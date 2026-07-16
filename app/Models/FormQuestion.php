@@ -22,12 +22,14 @@ class FormQuestion extends Model
         'sort_order',
         'section_id',
         'section_title',
+        'has_others',
     ];
 
     protected function casts(): array
     {
         return [
             'is_required' => 'boolean',
+            'has_others' => 'boolean',
         ];
     }
 

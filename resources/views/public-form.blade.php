@@ -246,6 +246,11 @@
                                 @break
 
                             @case('radio')
+                                @php
+                                    $optionsArray = $question->options->pluck('option_text')->toArray();
+                                    $oldAnswer = old('answers.' . $question->id);
+                                    $isOldOthers = !empty($oldAnswer) && !in_array($oldAnswer, $optionsArray);
+                                @endphp
                                 <div class="row">
                                     @foreach($question->options as $option)
                                     <div class="col-sm-6 mb-2">
@@ -255,16 +260,51 @@
                                                 data-question-id="{{ $question->id }}"
                                                 data-go-to-section="{{ $option->go_to_section ?? '' }}"
                                                 {{ $question->is_required ? 'required' : '' }}
-                                                {{ old('answers.' . $question->id) == $option->option_text ? 'checked' : '' }}>
+                                                {{ $oldAnswer == $option->option_text ? 'checked' : '' }}>
                                             <span class="small font-weight-bold text-dark">{{ $option->option_text }}</span>
                                         </label>
                                     </div>
                                     @endforeach
+
+                                    <!-- Others Option -->
+                                    @if($question->has_others)
+                                    <div class="col-12 mb-2 option-others-container" data-question-id="{{ $question->id }}">
+                                        <label class="list-group-item list-group-item-action d-flex align-items-center option-item border option-item-radio" style="border-radius: 8px; cursor: pointer; margin-bottom: 0;">
+                                            <input type="radio" name="answers[{{ $question->id }}]"
+                                                value="Others" class="mr-3 option-input option-others-trigger"
+                                                data-question-id="{{ $question->id }}"
+                                                {{ $question->is_required ? 'required' : '' }}
+                                                {{ $isOldOthers ? 'checked' : '' }}>
+                                            <span class="small font-weight-bold text-dark">Lainnya (Tuliskan)</span>
+                                        </label>
+                                        <div class="option-others-input-wrapper mt-2" style="display: {{ $isOldOthers ? 'block' : 'none' }};">
+                                            <input type="text" 
+                                                name="answers_others[{{ $question->id }}]" 
+                                                class="form-control option-others-text" 
+                                                placeholder="Tuliskan pilihan lainnya..." 
+                                                value="{{ $isOldOthers ? $oldAnswer : '' }}"
+                                                style="border-radius: 8px;">
+                                        </div>
+                                    </div>
+                                    @endif
                                 </div>
                                 @break
 
                             @case('checkbox')
-                                @php $oldCheckbox = old('answers.' . $question->id, []); @endphp
+                                @php 
+                                    $oldCheckbox = old('answers.' . $question->id, []); 
+                                    $optionsArray = $question->options->pluck('option_text')->toArray();
+                                    $oldOthersText = '';
+                                    if (is_array($oldCheckbox)) {
+                                        foreach ($oldCheckbox as $val) {
+                                            if (!in_array($val, $optionsArray) && $val !== 'Others') {
+                                                $oldOthersText = $val;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    $isOldOthers = !empty($oldOthersText);
+                                @endphp
                                 <div class="row">
                                     @foreach($question->options as $option)
                                     <div class="col-sm-6 mb-2">
@@ -277,6 +317,27 @@
                                         </label>
                                     </div>
                                     @endforeach
+
+                                    <!-- Others Option for Checkbox -->
+                                    @if($question->has_others)
+                                    <div class="col-12 mb-2 option-others-container" data-question-id="{{ $question->id }}">
+                                        <label class="list-group-item list-group-item-action d-flex align-items-center option-item border option-item-check" style="border-radius: 8px; cursor: pointer; margin-bottom: 0;">
+                                            <input type="checkbox" name="answers[{{ $question->id }}][]"
+                                                value="Others" class="mr-3 option-checkbox option-input option-others-trigger"
+                                                data-question-id="{{ $question->id }}"
+                                                {{ $isOldOthers ? 'checked' : '' }}>
+                                            <span class="small font-weight-bold text-dark">Lainnya (Tuliskan)</span>
+                                        </label>
+                                        <div class="option-others-input-wrapper mt-2" style="display: {{ $isOldOthers ? 'block' : 'none' }};">
+                                            <input type="text" 
+                                                name="answers_others[{{ $question->id }}]" 
+                                                class="form-control option-others-text" 
+                                                placeholder="Tuliskan pilihan lainnya..." 
+                                                value="{{ $oldOthersText }}"
+                                                style="border-radius: 8px;">
+                                        </div>
+                                    </div>
+                                    @endif
                                 </div>
                                 @break
 
@@ -469,9 +530,32 @@ $(document).ready(function() {
         const name = $(this).attr('name');
         $('input[name="' + name + '"]').closest('.option-item-radio').removeClass('active-option');
         if ($(this).is(':checked')) $(this).closest('.option-item-radio').addClass('active-option');
+        
+        // If it's a radio and they select something else, hide and clear others text
+        if (!$(this).hasClass('option-others-trigger')) {
+            const container = $(this).closest('.row');
+            const wrapper = container.find('.option-others-input-wrapper');
+            const textInput = wrapper.find('.option-others-text');
+            wrapper.slideUp(200);
+            textInput.val('');
+        }
     });
     $(document).on('change', 'input[type="checkbox"].option-input', function() {
         $(this).closest('.option-item-check').toggleClass('active-option', $(this).is(':checked'));
+    });
+
+    // Handle "Others" option input toggling for radio/checkbox
+    $(document).on('change', '.option-others-trigger', function() {
+        const wrapper = $(this).closest('.option-others-container').find('.option-others-input-wrapper');
+        const textInput = wrapper.find('.option-others-text');
+        
+        if ($(this).is(':checked')) {
+            wrapper.slideDown(200);
+            textInput.focus();
+        } else {
+            wrapper.slideUp(200);
+            textInput.val('');
+        }
     });
 
     // ---- Progress Tracker ----
@@ -479,7 +563,7 @@ $(document).ready(function() {
 
     function updateProgress() {
         const answered = {};
-        $('input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea').each(function() {
+        $('input[type="text"]:not(.option-others-text), input[type="number"], input[type="date"], input[type="time"], textarea').each(function() {
             const val = $(this).val(), name = $(this).attr('name');
             if (val && val.trim() !== '' && name) answered[name] = true;
         });

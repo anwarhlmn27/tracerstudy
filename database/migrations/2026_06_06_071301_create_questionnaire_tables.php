@@ -26,6 +26,7 @@ return new class extends Migration
             $table->string('db_source')->nullable()->comment('Sumber data database untuk tipe select_db');
             $table->string('question_type')->comment('text, textarea, radio, checkbox, select');
             $table->boolean('is_required')->default(true);
+            $table->boolean('has_others')->default(false);
             $table->integer('sort_order')->default(0);
             $table->integer('section_id')->default(1)->comment('Section tempat pertanyaan berada');
             $table->string('section_title')->nullable()->comment('Judul section jika merupakan awal dari section baru');

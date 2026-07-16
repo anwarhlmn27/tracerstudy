@@ -122,6 +122,19 @@ class PublicFormController extends Controller
                     }
                 } else {
                     $answer = $validated['answers'][$question->id] ?? null;
+                    if ($question->question_type === 'radio' && $answer === 'Others') {
+                        $answer = $request->input("answers_others.{$question->id}");
+                    } elseif ($question->question_type === 'checkbox' && is_array($answer)) {
+                        if (in_array('Others', $answer)) {
+                            $otherVal = $request->input("answers_others.{$question->id}");
+                            if (!empty($otherVal)) {
+                                $idx = array_search('Others', $answer);
+                                $answer[$idx] = $otherVal;
+                            } else {
+                                $answer = array_filter($answer, function($val) { return $val !== 'Others'; });
+                            }
+                        }
+                    }
                     // Skip required check for cascading select questions (they identify the user)
                     $lower = strtolower(trim($question->question_text));
                     $isCascadingIdentity = (strpos($lower, 'universitas') !== false
@@ -161,7 +174,19 @@ class PublicFormController extends Controller
                 }
             } else {
                 $answerValue = $validated['answers'][$question->id] ?? null;
+                if ($question->question_type === 'radio' && $answerValue === 'Others') {
+                    $answerValue = $request->input("answers_others.{$question->id}") ?: 'Lainnya';
+                }
                 if ($question->question_type === 'checkbox' && is_array($answerValue)) {
+                    if (in_array('Others', $answerValue)) {
+                        $otherVal = $request->input("answers_others.{$question->id}");
+                        if (!empty($otherVal)) {
+                            $idx = array_search('Others', $answerValue);
+                            $answerValue[$idx] = $otherVal;
+                        } else {
+                            $answerValue = array_filter($answerValue, function($val) { return $val !== 'Others'; });
+                        }
+                    }
                     $answerValue = implode(', ', $answerValue);
                 }
             }

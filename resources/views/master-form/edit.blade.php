@@ -192,9 +192,18 @@
                                                     </div>
                                                 </template>
                                             </div>
-                                            <button type="button" class="btn btn-link p-0 mt-3 text-danger font-weight-bold small text-capitalize" @click="addOption(globalIndex(question.id))">
-                                                <i class="fas fa-plus mr-1"></i> Tambah Opsi
-                                            </button>
+                                             <div class="d-flex align-items-center justify-content-between mt-3 pt-3 border-top">
+                                                 <button type="button" class="btn btn-link p-0 text-danger font-weight-bold small text-capitalize m-0" @click="addOption(globalIndex(question.id))">
+                                                     <i class="fas fa-plus mr-1"></i> Tambah Opsi
+                                                 </button>
+                                                 <!-- Toggle for Others Option (Only for radio and checkbox) -->
+                                                 <template x-if="['radio', 'checkbox'].includes(question.type)">
+                                                     <div class="custom-control custom-checkbox">
+                                                         <input type="checkbox" class="custom-control-input" :id="'has_others_' + question.id" x-model="question.has_others">
+                                                         <label class="custom-control-label font-weight-bold text-dark small" :for="'has_others_' + question.id" style="cursor: pointer;">Tambahkan pilihan 'Lainnya' (Others)</label>
+                                                     </div>
+                                                 </template>
+                                             </div>
                                         </div>
 
                                         <!-- Options for linear scale -->
@@ -286,6 +295,7 @@
                 <input type="hidden" :name="'questions[' + qIndex + '][required]'" :value="question.required ? 1 : 0">
                 <input type="hidden" :name="'questions[' + qIndex + '][section_id]'" :value="question.sectionId">
                 <input type="hidden" :name="'questions[' + qIndex + '][section_title]'" :value="getSectionTitle(question.sectionId, qIndex)">
+                <input type="hidden" :name="'questions[' + qIndex + '][has_others]'" :value="question.has_others ? 1 : 0">
                 <template x-if="['radio', 'select', 'checkbox', 'linear_scale', 'rating'].includes(question.type)">
                     <template x-for="(opt, oIndex) in question.options" :key="'opt-' + oIndex">
                         <div>
@@ -346,6 +356,7 @@
             'sectionTitle' => $q->section_title ?? '',
             'options' => $q->options->pluck('option_text')->toArray(),
             'goToSections' => $goToSections,
+            'has_others' => (bool) $q->has_others,
         ];
     })->values()->all();
 
@@ -387,6 +398,7 @@ function formBuilder() {
                 description: q.description || '',
                 options: options,
                 goToSections: q.goToSections || {},
+                has_others: q.has_others || false,
             };
         }),
         sections: existingSections,
@@ -421,6 +433,7 @@ function formBuilder() {
                 required: true,
                 options: ['', ''],
                 goToSections: {},
+                has_others: false,
             });
         },
 
@@ -434,6 +447,7 @@ function formBuilder() {
                 required: true,
                 options: ['', ''],
                 goToSections: {},
+                has_others: false,
             });
         },
 
@@ -449,6 +463,7 @@ function formBuilder() {
                 required: true,
                 options: ['', ''],
                 goToSections: {},
+                has_others: false,
             });
         },
 
@@ -501,14 +516,19 @@ function formBuilder() {
         onTypeChange(qIndex) {
             const q = this.questions[qIndex];
             if (['radio', 'select', 'checkbox'].includes(q.type)) {
-                if (!q.options || q.options.length < 2 || q.options.length > 10) q.options = ['', ''];
+                if (!q.options || q.options.length < 2 || q.options.length > 10) {
+                    q.options = ['', ''];
+                }
                 q.goToSections = {};
+                q.has_others = q.has_others ?? false;
             } else if (q.type === 'linear_scale') {
                 q.options = ['1', '5', '', ''];
                 q.goToSections = {};
+                q.has_others = false;
             } else if (q.type === 'rating') {
                 q.options = ['5'];
                 q.goToSections = {};
+                q.has_others = false;
             } else {
                 q.options = [];
                 q.goToSections = {};
