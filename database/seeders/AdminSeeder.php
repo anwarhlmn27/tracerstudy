@@ -12,11 +12,11 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => 'admin@tracer.ac.id'],
+            ['email' => 'ace@horizon.ac.id'],
             [
                 'id' => Str::uuid(),
                 'name' => 'Administrator',
-                'password' => Hash::make('password@234'),
+                'password' => Hash::make('Password@234'),
                 'role' => 'admin',
             ]
         );
