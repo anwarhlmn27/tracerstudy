@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\Prodi;
+use App\Models\Univ;
+use App\Models\Fakultas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -17,12 +19,71 @@ class AlumniController extends Controller
     /**
      * Display a listing of students (alumni data).
      */
-    public function index()
+    public function index(Request $request)
     {
-        $students = Student::with(['user', 'prodi'])->orderBy('created_at', 'desc')->get();
-        $prodis = Prodi::all();
+        $univId     = $request->input('univ_id');
+        $fakultasId = $request->input('fakultas_id');
+        $prodiId    = $request->input('prodi_id');
+        $angkatan   = $request->input('angkatan');
 
-        return view('alumni', compact('students', 'prodis'));
+        $query = Student::with(['user', 'prodi.fakultas.univ']);
+
+        if ($prodiId) {
+            $query->where('prodi_id', $prodiId);
+        } elseif ($fakultasId) {
+            $query->whereHas('prodi', function ($q) use ($fakultasId) {
+                $q->where('fakultas_id', $fakultasId);
+            });
+        } elseif ($univId) {
+            $query->whereHas('prodi.fakultas', function ($q) use ($univId) {
+                $q->where('id_univs', $univId);
+            });
+        }
+
+        if ($angkatan) {
+            $query->where('angkatan', $angkatan);
+        }
+
+        $students = $query->orderBy('created_at', 'desc')->get();
+
+        $univs = Univ::orderBy('nama_univ')->get(['id', 'nama_univ']);
+
+        $fakultasList = $univId
+            ? Fakultas::where('id_univs', $univId)->orderBy('nama_fakultas')->get(['id', 'nama_fakultas'])
+            : collect();
+
+        $prodiList = $fakultasId
+            ? Prodi::where('fakultas_id', $fakultasId)->orderBy('nama_prodi')->get(['id', 'nama_prodi'])
+            : ($univId
+                ? Prodi::whereHas('fakultas', fn($q) => $q->where('id_univs', $univId))->orderBy('nama_prodi')->get(['id', 'nama_prodi'])
+                : Prodi::orderBy('nama_prodi')->get(['id', 'nama_prodi']));
+
+        $angkatans = Student::whereNotNull('angkatan')
+            ->distinct()
+            ->orderBy('angkatan', 'desc')
+            ->pluck('angkatan');
+
+        $prodis = Prodi::orderBy('nama_prodi')->get();
+
+        $activeUniv     = $univId     ? Univ::find($univId)     : null;
+        $activeFakultas = $fakultasId ? Fakultas::find($fakultasId) : null;
+        $activeProdi    = $prodiId    ? Prodi::find($prodiId)   : null;
+
+        return view('alumni', compact(
+            'students',
+            'prodis',
+            'univs',
+            'fakultasList',
+            'prodiList',
+            'angkatans',
+            'univId',
+            'fakultasId',
+            'prodiId',
+            'angkatan',
+            'activeUniv',
+            'activeFakultas',
+            'activeProdi'
+        ));
     }
 
     /**

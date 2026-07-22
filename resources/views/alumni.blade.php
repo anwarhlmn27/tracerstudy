@@ -7,6 +7,115 @@
 
 
 <div class="container-fluid">
+
+    {{-- ══════════════════════════════════════════════
+         FILTER PANEL
+    ══════════════════════════════════════════════ --}}
+    <div class="filter-panel mb-4">
+        <div class="filter-title">
+            <i class="fas fa-filter"></i> Filter Data Alumni
+        </div>
+
+        <form method="GET" action="{{ route('alumni.index') }}" id="alumniFilterForm">
+            <div class="row align-items-end" style="gap-y:0.5rem;">
+
+                {{-- Universitas --}}
+                <div class="col-12 col-sm-6 col-lg-3 mb-2">
+                    <label class="filter-label" for="sel_univ">Universitas</label>
+                    <select id="sel_univ" name="univ_id" class="form-control">
+                        <option value="0">-- Semua Universitas --</option>
+                        @foreach($univs as $u)
+                            <option value="{{ $u->id }}" {{ $univId == $u->id ? 'selected' : '' }}>
+                                {{ $u->nama_univ }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Fakultas --}}
+                <div class="col-12 col-sm-6 col-lg-3 mb-2">
+                    <label class="filter-label" for="sel_fakultas">Fakultas</label>
+                    <select id="sel_fakultas" name="fakultas_id" class="form-control" {{ !$univId ? 'disabled' : '' }}>
+                        <option value="0">-- Semua Fakultas --</option>
+                        @foreach($fakultasList as $f)
+                            <option value="{{ $f->id }}" {{ $fakultasId == $f->id ? 'selected' : '' }}>
+                                {{ $f->nama_fakultas }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Program Studi --}}
+                <div class="col-12 col-sm-6 col-lg-3 mb-2">
+                    <label class="filter-label" for="sel_prodi">Program Studi</label>
+                    <select id="sel_prodi" name="prodi_id" class="form-control" {{ (!$fakultasId && !$univId) ? 'disabled' : '' }}>
+                        <option value="0">-- Semua Prodi --</option>
+                        @foreach($prodiList as $p)
+                            <option value="{{ $p->id }}" {{ $prodiId == $p->id ? 'selected' : '' }}>
+                                {{ $p->nama_prodi }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Angkatan --}}
+                <div class="col-12 col-sm-6 col-lg-3 mb-2">
+                    <label class="filter-label" for="sel_angkatan">Angkatan</label>
+                    <select id="sel_angkatan" name="angkatan" class="form-control">
+                        <option value="">-- Semua Angkatan --</option>
+                        @foreach($angkatans as $ang)
+                            <option value="{{ $ang }}" {{ $angkatan == $ang ? 'selected' : '' }}>
+                                {{ $ang }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Buttons --}}
+                <div class="col-12 mb-2 d-flex align-items-center justify-content-end" style="gap:0.5rem;">
+                    <button type="submit" class="btn-filter-apply px-4">
+                        <i class="fas fa-search mr-1"></i> Terapkan Filter
+                    </button>
+                    <a href="{{ route('alumni.index') }}" class="btn-filter-reset px-3">
+                        <i class="fas fa-undo mr-1"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {{-- Active filter badges --}}
+        @if($activeUniv || $activeFakultas || $activeProdi || $angkatan)
+            <div class="mt-3 pt-2 border-top d-flex flex-wrap align-items-center" style="gap:0.4rem; font-size:0.8rem;">
+                <span class="text-muted font-weight-bold mr-1"><i class="fas fa-tags mr-1"></i>Filter Aktif:</span>
+                @if($activeUniv)
+                    <span class="badge badge-light border px-2 py-1">
+                        Univ: <strong>{{ $activeUniv->nama_univ }}</strong>
+                        <a href="{{ route('alumni.index', request()->except(['univ_id', 'fakultas_id', 'prodi_id'])) }}" class="text-danger ml-1" title="Hapus filter univ">&times;</a>
+                    </span>
+                @endif
+                @if($activeFakultas)
+                    <span class="badge badge-light border px-2 py-1">
+                        Fakultas: <strong>{{ $activeFakultas->nama_fakultas }}</strong>
+                        <a href="{{ route('alumni.index', request()->except(['fakultas_id', 'prodi_id'])) }}" class="text-danger ml-1" title="Hapus filter fakultas">&times;</a>
+                    </span>
+                @endif
+                @if($activeProdi)
+                    <span class="badge badge-light border px-2 py-1">
+                        Prodi: <strong>{{ $activeProdi->nama_prodi }}</strong>
+                        <a href="{{ route('alumni.index', request()->except('prodi_id')) }}" class="text-danger ml-1" title="Hapus filter prodi">&times;</a>
+                    </span>
+                @endif
+                @if($angkatan)
+                    <span class="badge badge-light border px-2 py-1">
+                        Angkatan: <strong>{{ $angkatan }}</strong>
+                        <a href="{{ route('alumni.index', request()->except('angkatan')) }}" class="text-danger ml-1" title="Hapus filter angkatan">&times;</a>
+                    </span>
+                @endif
+                <a href="{{ route('alumni.index') }}" class="text-danger small font-weight-bold ml-2">Hapus Semua Filter</a>
+            </div>
+        @endif
+    </div>
+
     <div class="card alumni-card">
         <div class="card-body p-0">
             <!-- Card Title & Buttons -->
@@ -124,7 +233,12 @@
                             </td>
                             <td class="align-middle">
                                 <div class="font-weight-bold text-dark">{{ $student->prodi->nama_prodi ?? '-' }}</div>
-                                <small class="text-muted">Angkatan <span class="font-weight-bold">{{ $student->angkatan }}</span></small>
+                                <small class="text-muted">
+                                    @if(isset($student->prodi->fakultas->nama_fakultas))
+                                        <span class="text-secondary">{{ $student->prodi->fakultas->short_name ?? $student->prodi->fakultas->nama_fakultas }}</span> &bull;
+                                    @endif
+                                    Angkatan <span class="font-weight-bold">{{ $student->angkatan }}</span>
+                                </small>
                             </td>
                             <td class="align-middle">
                                 @if($student->status_alumni)
@@ -611,5 +725,46 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Mengimpor...';
     });
+
+    // ── Cascade Dropdown Filter (Univ -> Fakultas -> Prodi) ──
+    (function () {
+        const selUniv     = document.getElementById('sel_univ');
+        const selFakultas = document.getElementById('sel_fakultas');
+        const selProdi    = document.getElementById('sel_prodi');
+        const filterUrl   = '{{ route("reports.filterOptions") }}';
+
+        if (!selUniv || !selFakultas || !selProdi) return;
+
+        function fetchOptions(type, parentId, targetSelect, currentVal) {
+            if (!parentId || parentId === '0') {
+                targetSelect.innerHTML = '<option value="0">-- Semua ' + (type === 'fakultas' ? 'Fakultas' : 'Prodi') + ' --</option>';
+                targetSelect.disabled = true;
+                return;
+            }
+            fetch(filterUrl + '?type=' + type + '&parent_id=' + parentId)
+                .then(r => r.json())
+                .then(items => {
+                    targetSelect.innerHTML = '<option value="0">-- Semua ' + (type === 'fakultas' ? 'Fakultas' : 'Prodi') + ' --</option>';
+                    items.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.id;
+                        opt.textContent = item.label;
+                        if (String(item.id) === String(currentVal)) opt.selected = true;
+                        targetSelect.appendChild(opt);
+                    });
+                    targetSelect.disabled = false;
+                });
+        }
+
+        selUniv.addEventListener('change', function () {
+            fetchOptions('fakultas', this.value, selFakultas, 0);
+            selProdi.innerHTML = '<option value="0">-- Semua Prodi --</option>';
+            selProdi.disabled = true;
+        });
+
+        selFakultas.addEventListener('change', function () {
+            fetchOptions('prodi', this.value, selProdi, 0);
+        });
+    })();
 </script>
 @endpush
