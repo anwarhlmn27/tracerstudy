@@ -353,9 +353,7 @@ class AlumniController extends Controller
                 $existingEmails[$email] = true;
 
                 // ── Simpan: User + Student ──
-                $userId = Str::uuid()->toString();
-                User::create([
-                    'id'       => $userId,
+                $user = User::create([
                     'name'     => $namaStudent,
                     'email'    => $email,
                     'password' => $defaultPasswordHash,
@@ -363,8 +361,7 @@ class AlumniController extends Controller
                 ]);
 
                 Student::create([
-                    'id'           => Str::uuid()->toString(),
-                    'user_id'      => $userId,
+                    'user_id'      => $user->id,
                     'prodi_id'     => $prodiMap[$kodeProdi],
                     'nim'          => $nim,
                     'nama_student' => $namaStudent,
