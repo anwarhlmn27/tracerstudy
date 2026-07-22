@@ -251,6 +251,10 @@ class AlumniController extends Controller
      */
     public function import(Request $request)
     {
+        // Prevent execution timeout on large imports (e.g. 300+ records)
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
+
         $request->validate([
             'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:5120'],
         ], [
@@ -279,81 +283,98 @@ class AlumniController extends Controller
         // Build prodi lookup: kode_prodi → prodi id
         $prodiMap = Prodi::pluck('id', 'kode_prodi')->toArray();
 
-        foreach ($rows as $rowIndex => $row) {
-            // Baris 0 = header → lewati
-            if ($rowIndex === 0) continue;
+        // Pre-fetch existing NIMs & Emails for fast in-memory duplicate checking (O(1) lookup)
+        $existingNims   = Student::pluck('nim')->mapWithKeys(fn($n) => [(string) $n => true])->toArray();
+        $existingEmails = User::pluck('email')->mapWithKeys(fn($e) => [strtolower($e) => true])->toArray();
 
-            // Lewati baris kosong atau baris referensi (===)
-            $rowStr = implode('', array_map('trim', $row));
-            if (empty($rowStr) || str_starts_with(trim($row[0] ?? ''), '===')) {
-                continue;
+        // Pre-hash default password ONCE to eliminate Bcrypt CPU bottleneck (300 bcrypt calls = ~45s)
+        $defaultPasswordHash = Hash::make('password123');
+
+        \Illuminate\Support\Facades\DB::transaction(function () use (
+            $rows, $prodiMap, &$existingNims, &$existingEmails, $defaultPasswordHash,
+            &$imported, &$skipped, &$errors
+        ) {
+            foreach ($rows as $rowIndex => $row) {
+                // Baris 0 = header → lewati
+                if ($rowIndex === 0) continue;
+
+                // Lewati baris kosong atau baris referensi (===)
+                $rowStr = implode('', array_map('trim', $row));
+                if (empty($rowStr) || str_starts_with(trim($row[0] ?? ''), '===')) {
+                    continue;
+                }
+
+                $lineNum = $rowIndex + 1;
+
+                // ── Pemetaan kolom (hanya 6 kolom inti) ──
+                $nim          = trim((string)($row[0] ?? ''));
+                $namaStudent  = trim($row[1] ?? '');
+                $email        = strtolower(trim($row[2] ?? ''));
+                $kodeProdi    = trim($row[3] ?? '');
+                $angkatan     = trim($row[4] ?? '');
+                $status       = strtolower(trim($row[5] ?? ''));
+
+                // ── Validasi per-baris ──
+                $rowErrors = [];
+
+                if (empty($nim))
+                    $rowErrors[] = 'NIM wajib diisi';
+                if (empty($namaStudent))
+                    $rowErrors[] = 'Nama wajib diisi';
+                if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))
+                    $rowErrors[] = 'Email tidak valid';
+                if (!array_key_exists($kodeProdi, $prodiMap))
+                    $rowErrors[] = "Kode Prodi '$kodeProdi' tidak ditemukan";
+                if (!is_numeric($angkatan) || $angkatan < 2000 || $angkatan > 2099)
+                    $rowErrors[] = 'Angkatan tidak valid (2000–2099)';
+                if (!in_array($status, $this->validStatus))
+                    $rowErrors[] = "Status '$status' tidak valid (aktif/lulus/cuti/drop_out)";
+
+                if (!empty($rowErrors)) {
+                    $errors[] = "Baris $lineNum: " . implode(', ', $rowErrors);
+                    $skipped++;
+                    continue;
+                }
+
+                // ── Cek duplikat (in-memory fast check) ──
+                if (isset($existingNims[$nim])) {
+                    $errors[] = "Baris $lineNum: NIM '$nim' sudah terdaftar, dilewati.";
+                    $skipped++;
+                    continue;
+                }
+                if (isset($existingEmails[$email])) {
+                    $errors[] = "Baris $lineNum: Email '$email' sudah terdaftar, dilewati.";
+                    $skipped++;
+                    continue;
+                }
+
+                // Catat di memory agar duplikat dalam file yang sama juga terdeteksi
+                $existingNims[$nim]     = true;
+                $existingEmails[$email] = true;
+
+                // ── Simpan: User + Student ──
+                $userId = Str::uuid()->toString();
+                User::create([
+                    'id'       => $userId,
+                    'name'     => $namaStudent,
+                    'email'    => $email,
+                    'password' => $defaultPasswordHash,
+                    'role'     => 'alumni',
+                ]);
+
+                Student::create([
+                    'id'           => Str::uuid()->toString(),
+                    'user_id'      => $userId,
+                    'prodi_id'     => $prodiMap[$kodeProdi],
+                    'nim'          => $nim,
+                    'nama_student' => $namaStudent,
+                    'angkatan'     => (int) $angkatan,
+                    'status'       => $status,
+                ]);
+
+                $imported++;
             }
-
-            $lineNum  = $rowIndex + 1;
-
-            // ── Pemetaan kolom (hanya 6 kolom inti) ──
-            $nim          = trim($row[0] ?? '');
-            $namaStudent  = trim($row[1] ?? '');
-            $email        = trim($row[2] ?? '');
-            $kodeProdi    = trim($row[3] ?? '');
-            $angkatan     = trim($row[4] ?? '');
-            $status       = strtolower(trim($row[5] ?? ''));
-
-            // ── Validasi per-baris ──
-            $rowErrors = [];
-
-            if (empty($nim))
-                $rowErrors[] = 'NIM wajib diisi';
-            if (empty($namaStudent))
-                $rowErrors[] = 'Nama wajib diisi';
-            if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))
-                $rowErrors[] = 'Email tidak valid';
-            if (!array_key_exists($kodeProdi, $prodiMap))
-                $rowErrors[] = "Kode Prodi '$kodeProdi' tidak ditemukan";
-            if (!is_numeric($angkatan) || $angkatan < 2000 || $angkatan > 2099)
-                $rowErrors[] = 'Angkatan tidak valid (2000–2099)';
-            if (!in_array($status, $this->validStatus))
-                $rowErrors[] = "Status '$status' tidak valid (aktif/lulus/cuti/drop_out)";
-
-            if (!empty($rowErrors)) {
-                $errors[] = "Baris $lineNum: " . implode(', ', $rowErrors);
-                $skipped++;
-                continue;
-            }
-
-            // ── Cek duplikat ──
-            if (Student::where('nim', $nim)->exists()) {
-                $errors[] = "Baris $lineNum: NIM '$nim' sudah terdaftar, dilewati.";
-                $skipped++;
-                continue;
-            }
-            if (User::where('email', $email)->exists()) {
-                $errors[] = "Baris $lineNum: Email '$email' sudah terdaftar, dilewati.";
-                $skipped++;
-                continue;
-            }
-
-            // ── Simpan: User + Student (prodi_id otomatis link ke Fakultas & Univ) ──
-            $user = User::create([
-                'id'       => Str::uuid(),
-                'name'     => $namaStudent,
-                'email'    => $email,
-                'password' => Hash::make('password123'),
-                'role'     => 'alumni',
-            ]);
-
-            Student::create([
-                'id'           => Str::uuid(),
-                'user_id'      => $user->id,
-                'prodi_id'     => $prodiMap[$kodeProdi],
-                'nim'          => $nim,
-                'nama_student' => $namaStudent,
-                'angkatan'     => (int) $angkatan,
-                'status'       => $status,
-            ]);
-
-            $imported++;
-        }
+        });
 
         $msg        = "$imported data alumni berhasil diimpor.";
         $sessionKey = 'success';
