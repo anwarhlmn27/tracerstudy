@@ -195,7 +195,9 @@ class TracerResponseController extends Controller
                 }
 
                 // For checkbox, join multiple values
-                if ($question->question_type === 'checkbox' && is_array($answerValue)) {
+                if (in_array($question->question_type, ['matrix_radio', 'matrix_checkbox']) && is_array($answerValue)) {
+                    $answerValue = json_encode($answerValue, JSON_UNESCAPED_UNICODE);
+                } elseif ($question->question_type === 'checkbox' && is_array($answerValue)) {
                     if (in_array('Others', $answerValue)) {
                         $otherVal = $request->input("answers_others.{$question->id}");
                         if (!empty($otherVal)) {

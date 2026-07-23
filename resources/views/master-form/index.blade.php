@@ -31,67 +31,78 @@
             
             <div class="d-flex flex-column" style="gap: 12px;">
                 @forelse($forms->where('target_role', 'alumni') as $form)
-                <div class="card form-list-card bg-white">
-                    <div class="card-body p-4 d-flex justify-content-between align-items-start">
-                        <div class="pr-2 flex-grow-1" style="min-width: 0;">
-                            <div class="d-flex align-items-center flex-wrap" style="gap: 5px;">
-                                <h6 class="font-weight-bold text-dark mb-1 text-truncate" style="max-width: 250px;">{{ $form->title }}</h6>
+                <div class="card form-list-card bg-white shadow-sm border-0 mb-3" style="border-radius: 14px;">
+                    <div class="card-body p-4">
+                        <!-- Top Row: Title + Status + Action Buttons -->
+                        <div class="d-flex justify-content-between align-items-start mb-2" style="gap: 12px;">
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 8px; flex: 1; min-width: 0;">
+                                <h6 class="font-weight-bold text-dark mb-0" style="font-size: 1rem; line-height: 1.4; word-break: break-word;">
+                                    {{ $form->title }}
+                                </h6>
                                 @if($form->is_active)
-                                    <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 8px;">AKTIF</span>
+                                    <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 9px; letter-spacing: 0.5px;">AKTIF</span>
                                 @else
-                                    <span class="badge badge-light text-muted px-2 py-1 font-weight-bold" style="font-size: 8px;">NONAKTIF</span>
+                                    <span class="badge badge-light text-muted px-2 py-1 font-weight-bold border" style="font-size: 9px; letter-spacing: 0.5px;">NONAKTIF</span>
                                 @endif
                             </div>
-                            
-                            <div class="my-2">
-                                @if($form->angkatan)
-                                    <span class="badge badge-primary px-2 py-1" style="font-size: 9px; background-color: rgba(0, 123, 255, 0.1) !important; color: #007bff !important; border: 1px solid rgba(0, 123, 255, 0.2);">Angkatan {{ $form->angkatan }}</span>
-                                @else
-                                    <span class="badge badge-light px-2 py-1 border" style="font-size: 9px; color: #6c757d !important;">Semua Angkatan</span>
-                                @endif
-                                @if($form->form_group)
-                                    <span class="badge badge-purple px-2 py-1 border" style="white-space: normal; text-align: left; font-size: 9px; background-color: rgba(111, 66, 193, 0.1) !important; color: #6f42c1 !important; border-color: rgba(111, 66, 193, 0.2) !important;">{{ $form->form_group }}</span>
-                                @endif
-                            </div>
-                            
-                            <div class="d-flex align-items-center text-muted small mt-2" style="gap: 15px;">
-                                <span><i class="far fa-question-circle mr-1"></i> {{ $form->questions_count }} pertanyaan</span>
-                                <span><i class="far fa-file-alt mr-1"></i> {{ $form->responses_count }} respons</span>
-                                <span><i class="far fa-calendar-alt mr-1"></i> {{ $form->created_at->format('d M Y') }}</span>
+
+                            <!-- Action buttons -->
+                            <div class="d-flex align-items-center bg-light px-2 py-1 rounded-lg" style="gap: 4px; flex-shrink: 0;">
+                                <a href="{{ route('master-form.preview', $form->id) }}" target="_blank" class="btn btn-sm btn-link p-1 text-info" title="Preview Tampilan Kuesioner">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button"
+                                    class="btn btn-sm btn-link p-1 text-secondary get-link-btn"
+                                    title="Salin Link Kuesioner"
+                                    data-form-role="{{ $form->target_role }}"
+                                    data-form-title="{{ $form->title }}"
+                                    data-form-slug="{{ \Illuminate\Support\Str::slug($form->title) }}">
+                                    <i class="fas fa-link"></i>
+                                </button>
+                                <form action="{{ route('master-form.toggle', $form->id) }}" method="POST" class="m-0 d-inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-sm btn-link p-1 {{ $form->is_active ? 'text-warning' : 'text-success' }}" title="{{ $form->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
+                                        <i class="fas {{ $form->is_active ? 'fa-pause-circle' : 'fa-play-circle' }}"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ route('master-form.edit', $form->id) }}" class="btn btn-sm btn-link p-1 text-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('master-form.destroy', $form->id) }}" method="POST" class="m-0 d-inline" onsubmit="return confirm('Hapus form ini beserta semua pertanyaan dan responnya?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-link p-1 text-danger" title="Hapus">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
                             </div>
                         </div>
-                        
-                        <!-- Action buttons -->
-                        <div class="d-flex align-items-center">
-                            <button type="button"
-                                class="btn btn-link p-1 text-secondary get-link-btn"
-                                title="Salin Link Kuesioner"
-                                data-form-role="{{ $form->target_role }}"
-                                data-form-title="{{ $form->title }}"
-                                data-form-slug="{{ \Illuminate\Support\Str::slug($form->title) }}">
-                                <i class="fas fa-link fa-lg"></i>
-                            </button>
-                            <form action="{{ route('master-form.toggle', $form->id) }}" method="POST" class="m-0">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-link p-1.5 {{ $form->is_active ? 'text-warning' : 'text-success' }}" title="{{ $form->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
-                                    @if($form->is_active)
-                                        <i class="fas fa-pause-circle fa-lg"></i>
-                                    @else
-                                        <i class="fas fa-play-circle fa-lg"></i>
-                                    @endif
-                                </button>
-                            </form>
-                            <a href="{{ route('master-form.edit', $form->id) }}" class="btn btn-link p-1.5 text-primary" title="Edit">
-                                <i class="fas fa-edit fa-lg"></i>
-                            </a>
-                            <form action="{{ route('master-form.destroy', $form->id) }}" method="POST" class="m-0" onsubmit="return confirm('Hapus form ini beserta semua pertanyaan dan responnya?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-link p-1.5 text-danger" title="Hapus">
-                                    <i class="fas fa-trash-alt fa-lg"></i>
-                                </button>
-                            </form>
+
+                        <!-- Middle Row: Badges -->
+                        <div class="d-flex flex-wrap align-items-center my-3" style="gap: 6px;">
+                            @if($form->angkatan)
+                                <span class="badge badge-primary px-2.5 py-1" style="font-size: 10px; background-color: rgba(0, 123, 255, 0.1) !important; color: #007bff !important; border: 1px solid rgba(0, 123, 255, 0.2);">
+                                    <i class="fas fa-graduation-cap mr-1"></i> Angkatan {{ $form->angkatan }}
+                                </span>
+                            @else
+                                <span class="badge badge-light px-2.5 py-1 border" style="font-size: 10px; color: #6c757d !important;">
+                                    <i class="fas fa-users mr-1"></i> Semua Angkatan
+                                </span>
+                            @endif
+
+                            @if($form->form_group)
+                                <span class="badge badge-purple px-2.5 py-1 border" style="font-size: 10px; background-color: rgba(111, 66, 193, 0.1) !important; color: #6f42c1 !important; border-color: rgba(111, 66, 193, 0.2) !important;">
+                                    <i class="fas fa-layer-group mr-1"></i> {{ $form->form_group }}
+                                </span>
+                            @endif
+                        </div>
+
+                        <!-- Footer Meta Info -->
+                        <div class="d-flex align-items-center text-muted small pt-2 border-top" style="gap: 16px; font-size: 0.8rem;">
+                            <span><i class="far fa-question-circle mr-1 text-danger"></i> <strong>{{ $form->questions_count }}</strong> pertanyaan</span>
+                            <span><i class="far fa-file-alt mr-1 text-primary"></i> <strong>{{ $form->responses_count }}</strong> respons</span>
+                            <span class="ml-auto"><i class="far fa-calendar-alt mr-1 text-secondary"></i> {{ $form->created_at->format('d M Y') }}</span>
                         </div>
                     </div>
                 </div>
@@ -117,67 +128,78 @@
             
             <div class="d-flex flex-column" style="gap: 12px;">
                 @forelse($forms->where('target_role', 'atasan') as $form)
-                <div class="card form-list-card bg-white">
-                    <div class="card-body p-4 d-flex justify-content-between align-items-start">
-                        <div class="pr-2 flex-grow-1" style="min-width: 0;">
-                            <div class="d-flex align-items-center flex-wrap" style="gap: 5px;">
-                                <h6 class="font-weight-bold text-dark mb-1 text-truncate" style="max-width: 250px;">{{ $form->title }}</h6>
+                <div class="card form-list-card bg-white shadow-sm border-0 mb-3" style="border-radius: 14px;">
+                    <div class="card-body p-4">
+                        <!-- Top Row: Title + Status + Action Buttons -->
+                        <div class="d-flex justify-content-between align-items-start mb-2" style="gap: 12px;">
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 8px; flex: 1; min-width: 0;">
+                                <h6 class="font-weight-bold text-dark mb-0" style="font-size: 1rem; line-height: 1.4; word-break: break-word;">
+                                    {{ $form->title }}
+                                </h6>
                                 @if($form->is_active)
-                                    <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 8px;">AKTIF</span>
+                                    <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 9px; letter-spacing: 0.5px;">AKTIF</span>
                                 @else
-                                    <span class="badge badge-light text-muted px-2 py-1 font-weight-bold" style="font-size: 8px;">NONAKTIF</span>
+                                    <span class="badge badge-light text-muted px-2 py-1 font-weight-bold border" style="font-size: 9px; letter-spacing: 0.5px;">NONAKTIF</span>
                                 @endif
                             </div>
-                            
-                            <div class="my-2">
-                                @if($form->angkatan)
-                                    <span class="badge badge-primary px-2 py-1" style="font-size: 9px; background-color: rgba(0, 123, 255, 0.1) !important; color: #007bff !important; border: 1px solid rgba(0, 123, 255, 0.2);">Angkatan {{ $form->angkatan }}</span>
-                                @else
-                                    <span class="badge badge-light px-2 py-1 border" style="font-size: 9px; color: #6c757d !important;">Semua Angkatan</span>
-                                @endif
-                                @if($form->form_group)
-                                    <span class="badge badge-purple px-2 py-1 border" style="white-space: normal; text-align: left; font-size: 9px; background-color: rgba(111, 66, 193, 0.1) !important; color: #6f42c1 !important; border-color: rgba(111, 66, 193, 0.2) !important;">{{ $form->form_group }}</span>
-                                @endif
-                            </div>
-                            
-                            <div class="d-flex align-items-center text-muted small mt-2" style="gap: 15px;">
-                                <span><i class="far fa-question-circle mr-1"></i> {{ $form->questions_count }} pertanyaan</span>
-                                <span><i class="far fa-file-alt mr-1"></i> {{ $form->responses_count }} respons</span>
-                                <span><i class="far fa-calendar-alt mr-1"></i> {{ $form->created_at->format('d M Y') }}</span>
+
+                            <!-- Action buttons -->
+                            <div class="d-flex align-items-center bg-light px-2 py-1 rounded-lg" style="gap: 4px; flex-shrink: 0;">
+                                <a href="{{ route('master-form.preview', $form->id) }}" target="_blank" class="btn btn-sm btn-link p-1 text-info" title="Preview Tampilan Kuesioner">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button"
+                                    class="btn btn-sm btn-link p-1 text-secondary get-link-btn"
+                                    title="Salin Link Kuesioner"
+                                    data-form-role="{{ $form->target_role }}"
+                                    data-form-title="{{ $form->title }}"
+                                    data-form-slug="{{ \Illuminate\Support\Str::slug($form->title) }}">
+                                    <i class="fas fa-link"></i>
+                                </button>
+                                <form action="{{ route('master-form.toggle', $form->id) }}" method="POST" class="m-0 d-inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-sm btn-link p-1 {{ $form->is_active ? 'text-warning' : 'text-success' }}" title="{{ $form->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
+                                        <i class="fas {{ $form->is_active ? 'fa-pause-circle' : 'fa-play-circle' }}"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ route('master-form.edit', $form->id) }}" class="btn btn-sm btn-link p-1 text-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('master-form.destroy', $form->id) }}" method="POST" class="m-0 d-inline" onsubmit="return confirm('Hapus form ini beserta semua pertanyaan dan responnya?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-link p-1 text-danger" title="Hapus">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
                             </div>
                         </div>
-                        
-                        <!-- Action buttons -->
-                        <div class="d-flex align-items-center">
-                            <button type="button"
-                                class="btn btn-link p-1 text-secondary get-link-btn"
-                                title="Salin Link Kuesioner"
-                                data-form-role="{{ $form->target_role }}"
-                                data-form-title="{{ $form->title }}"
-                                data-form-slug="{{ \Illuminate\Support\Str::slug($form->title) }}">
-                                <i class="fas fa-link fa-lg"></i>
-                            </button>
-                            <form action="{{ route('master-form.toggle', $form->id) }}" method="POST" class="m-0">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-link p-1.5 {{ $form->is_active ? 'text-warning' : 'text-success' }}" title="{{ $form->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
-                                    @if($form->is_active)
-                                        <i class="fas fa-pause-circle fa-lg"></i>
-                                    @else
-                                        <i class="fas fa-play-circle fa-lg"></i>
-                                    @endif
-                                </button>
-                            </form>
-                            <a href="{{ route('master-form.edit', $form->id) }}" class="btn btn-link p-1.5 text-primary" title="Edit">
-                                <i class="fas fa-edit fa-lg"></i>
-                            </a>
-                            <form action="{{ route('master-form.destroy', $form->id) }}" method="POST" class="m-0" onsubmit="return confirm('Hapus form ini beserta semua pertanyaan dan responnya?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-link p-1.5 text-danger" title="Hapus">
-                                    <i class="fas fa-trash-alt fa-lg"></i>
-                                </button>
-                            </form>
+
+                        <!-- Middle Row: Badges -->
+                        <div class="d-flex flex-wrap align-items-center my-3" style="gap: 6px;">
+                            @if($form->angkatan)
+                                <span class="badge badge-primary px-2.5 py-1" style="font-size: 10px; background-color: rgba(0, 123, 255, 0.1) !important; color: #007bff !important; border: 1px solid rgba(0, 123, 255, 0.2);">
+                                    <i class="fas fa-graduation-cap mr-1"></i> Angkatan {{ $form->angkatan }}
+                                </span>
+                            @else
+                                <span class="badge badge-light px-2.5 py-1 border" style="font-size: 10px; color: #6c757d !important;">
+                                    <i class="fas fa-users mr-1"></i> Semua Angkatan
+                                </span>
+                            @endif
+
+                            @if($form->form_group)
+                                <span class="badge badge-purple px-2.5 py-1 border" style="font-size: 10px; background-color: rgba(111, 66, 193, 0.1) !important; color: #6f42c1 !important; border-color: rgba(111, 66, 193, 0.2) !important;">
+                                    <i class="fas fa-layer-group mr-1"></i> {{ $form->form_group }}
+                                </span>
+                            @endif
+                        </div>
+
+                        <!-- Footer Meta Info -->
+                        <div class="d-flex align-items-center text-muted small pt-2 border-top" style="gap: 16px; font-size: 0.8rem;">
+                            <span><i class="far fa-question-circle mr-1 text-danger"></i> <strong>{{ $form->questions_count }}</strong> pertanyaan</span>
+                            <span><i class="far fa-file-alt mr-1 text-primary"></i> <strong>{{ $form->responses_count }}</strong> respons</span>
+                            <span class="ml-auto"><i class="far fa-calendar-alt mr-1 text-secondary"></i> {{ $form->created_at->format('d M Y') }}</span>
                         </div>
                     </div>
                 </div>

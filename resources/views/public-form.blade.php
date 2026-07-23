@@ -7,6 +7,25 @@
 
 <div class="pb-5">
 
+    @if(!empty($isPreview))
+    <div class="alert alert-warning border-0 rounded-lg p-3 mb-4 shadow-sm" style="background-color: #fff3cd; color: #856404; border-left: 5px solid #ffc107 !important; border-radius: 12px;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap:10px;">
+            <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center mr-3" style="width:36px; height:36px; flex-shrink:0;">
+                    <i class="fas fa-eye fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="font-weight-bold mb-0">MODE PREVIEW (PRATINJAU)</h6>
+                    <small>Form ini ditampilkan sebagaimana pengguna/alumni melihatnya. Pengiriman respon di-nonaktifkan.</small>
+                </div>
+            </div>
+            <a href="{{ route('master-form.index') }}" class="btn btn-sm btn-dark font-weight-bold px-3 py-2" style="border-radius:8px;">
+                <i class="fas fa-arrow-left mr-1"></i> Kembali ke Master Form
+            </a>
+        </div>
+    </div>
+    @endif
+
     {{-- Flash / Validation Errors --}}
     @if($errors->any())
     <div class="alert alert-danger border-0 rounded-lg p-3 mb-4" style="font-size: 0.85rem; background-color: #fff5f5; color: #c53030;">
@@ -373,6 +392,62 @@
                                     data-question-id="{{ $question->id }}"
                                     {{ $question->is_required ? 'required' : '' }}
                                     style="max-width: 200px;">
+                                @break
+
+                            @case('matrix_radio')
+                            @case('matrix_checkbox')
+                                @php
+                                    $matrixRows = $question->options->filter(fn($o) => str_starts_with($o->option_text, 'row:'))->map(fn($o) => substr($o->option_text, 4))->values()->all();
+                                    $matrixCols = $question->options->filter(fn($o) => str_starts_with($o->option_text, 'col:'))->map(fn($o) => substr($o->option_text, 4))->values()->all();
+                                    // Fallback for legacy options without prefix
+                                    if (empty($matrixRows) && empty($matrixCols)) {
+                                        $matrixRows = ['Pernyataan 1', 'Pernyataan 2'];
+                                        $matrixCols = $question->options->pluck('option_text')->toArray() ?: ['Sangat Tinggi', 'Tinggi', 'Cukup Tinggi', 'Rendah', 'Sangat Rendah'];
+                                    }
+                                    $isMatrixRadio = $question->question_type === 'matrix_radio';
+                                    $savedAnswers = old('answers.' . $question->id, []);
+                                    if (is_string($savedAnswers) && str_starts_with($savedAnswers, '{')) {
+                                        $savedAnswers = json_decode($savedAnswers, true) ?: [];
+                                    }
+                                @endphp
+                                <div class="table-responsive rounded border bg-white mt-2 mb-1 shadow-sm">
+                                    <table class="table table-bordered table-hover mb-0" style="font-size: 0.85rem;">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th class="align-middle text-dark" style="min-width: 180px; width: 40%;">Pernyataan / Baris</th>
+                                                @foreach($matrixCols as $col)
+                                                    <th class="text-center align-middle text-dark" style="min-width: 90px;">{{ $col }}</th>
+                                                @endforeach
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($matrixRows as $rIdx => $rowText)
+                                            <tr>
+                                                <td class="align-middle font-weight-bold text-dark" style="background:#fafafa;">
+                                                    <span class="text-muted mr-1" style="font-size: 11px;">{{ $rIdx + 1 }}.</span> {{ $rowText }}
+                                                </td>
+                                                @foreach($matrixCols as $cIdx => $colText)
+                                                    @php
+                                                        $inputName = $isMatrixRadio ? "answers[{$question->id}][{$rowText}]" : "answers[{$question->id}][{$rowText}][]";
+                                                        $rowVal = is_array($savedAnswers) ? ($savedAnswers[$rowText] ?? null) : null;
+                                                        $isChecked = $isMatrixRadio ? ($rowVal === $colText) : (is_array($rowVal) && in_array($colText, $rowVal));
+                                                    @endphp
+                                                    <td class="text-center align-middle" style="cursor: pointer;" onclick="$(this).find('input').click();">
+                                                        <input type="{{ $isMatrixRadio ? 'radio' : 'checkbox' }}"
+                                                            name="{{ $inputName }}"
+                                                            value="{{ $colText }}"
+                                                            class="option-input"
+                                                            data-question-id="{{ $question->id }}"
+                                                            {{ $isChecked ? 'checked' : '' }}
+                                                            {{ $question->is_required ? 'required' : '' }}
+                                                            onclick="event.stopPropagation();">
+                                                    </td>
+                                                @endforeach
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                                 @break
 
                             @default
@@ -774,6 +849,17 @@ $(document).ready(function() {
         }
 
         // 3. Konfirmasi sebelum submit
+        @if(!empty($isPreview))
+            Swal.fire({
+                icon: 'info',
+                title: 'Mode Preview',
+                text: 'Form berfungsi dengan baik! Ini adalah mode pratinjau, jawaban tidak disimpan ke database.',
+                confirmButtonColor: '#800000',
+                confirmButtonText: 'Tutup Preview'
+            });
+            return;
+        @endif
+
         Swal.fire({
             icon: 'question',
             title: 'Kirim Jawaban?',

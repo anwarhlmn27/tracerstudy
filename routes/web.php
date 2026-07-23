@@ -205,6 +205,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/master-form/create', [MasterFormController::class, 'create'])->name('master-form.create');
         Route::post('/master-form', [MasterFormController::class, 'store'])->name('master-form.store');
         Route::get('/master-form/{id}/edit', [MasterFormController::class, 'edit'])->name('master-form.edit');
+        Route::get('/master-form/{id}/preview', [PublicFormController::class, 'preview'])->name('master-form.preview');
         Route::put('/master-form/{id}', [MasterFormController::class, 'update'])->name('master-form.update');
         Route::delete('/master-form/{id}', [MasterFormController::class, 'destroy'])->name('master-form.destroy');
         Route::patch('/master-form/{id}/toggle', [MasterFormController::class, 'toggleActive'])->name('master-form.toggle');

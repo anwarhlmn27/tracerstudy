@@ -452,6 +452,61 @@
                                          style="border-radius: 8px; max-width: 200px;">
                                      @break
 
+                                 @case('matrix_radio')
+                                 @case('matrix_checkbox')
+                                     @php
+                                         $matrixRows = $question->options->filter(fn($o) => str_starts_with($o->option_text, 'row:'))->map(fn($o) => substr($o->option_text, 4))->values()->all();
+                                         $matrixCols = $question->options->filter(fn($o) => str_starts_with($o->option_text, 'col:'))->map(fn($o) => substr($o->option_text, 4))->values()->all();
+                                         if (empty($matrixRows) && empty($matrixCols)) {
+                                             $matrixRows = ['Pernyataan 1', 'Pernyataan 2'];
+                                             $matrixCols = $question->options->pluck('option_text')->toArray() ?: ['Sangat Tinggi', 'Tinggi', 'Cukup Tinggi', 'Rendah', 'Sangat Rendah'];
+                                         }
+                                         $isMatrixRadio = $question->question_type === 'matrix_radio';
+                                         $savedAnswers = old('answers.' . $question->id, []);
+                                         if (is_string($savedAnswers) && str_starts_with($savedAnswers, '{')) {
+                                             $savedAnswers = json_decode($savedAnswers, true) ?: [];
+                                         }
+                                     @endphp
+                                     <div class="table-responsive rounded border bg-white mt-2 mb-1 shadow-sm">
+                                         <table class="table table-bordered table-hover mb-0" style="font-size: 0.85rem;">
+                                             <thead class="bg-light">
+                                                 <tr>
+                                                     <th class="align-middle text-dark" style="min-width: 180px; width: 40%;">Pernyataan / Baris</th>
+                                                     @foreach($matrixCols as $col)
+                                                         <th class="text-center align-middle text-dark" style="min-width: 90px;">{{ $col }}</th>
+                                                     @endforeach
+                                                 </tr>
+                                             </thead>
+                                             <tbody>
+                                                 @foreach($matrixRows as $rIdx => $rowText)
+                                                 <tr>
+                                                     <td class="align-middle font-weight-bold text-dark" style="background:#fafafa;">
+                                                         <span class="text-muted mr-1" style="font-size: 11px;">{{ $rIdx + 1 }}.</span> {{ $rowText }}
+                                                     </td>
+                                                     @foreach($matrixCols as $cIdx => $colText)
+                                                         @php
+                                                             $inputName = $isMatrixRadio ? "answers[{$question->id}][{$rowText}]" : "answers[{$question->id}][{$rowText}][]";
+                                                             $rowVal = is_array($savedAnswers) ? ($savedAnswers[$rowText] ?? null) : null;
+                                                             $isChecked = $isMatrixRadio ? ($rowVal === $colText) : (is_array($rowVal) && in_array($colText, $rowVal));
+                                                         @endphp
+                                                         <td class="text-center align-middle" style="cursor: pointer;" onclick="$(this).find('input').click();">
+                                                             <input type="{{ $isMatrixRadio ? 'radio' : 'checkbox' }}"
+                                                                 name="{{ $inputName }}"
+                                                                 value="{{ $colText }}"
+                                                                 class="option-input"
+                                                                 data-question-id="{{ $question->id }}"
+                                                                 {{ $isChecked ? 'checked' : '' }}
+                                                                 {{ $question->is_required ? 'required' : '' }}
+                                                                 onclick="event.stopPropagation();">
+                                                         </td>
+                                                     @endforeach
+                                                 </tr>
+                                                 @endforeach
+                                             </tbody>
+                                         </table>
+                                     </div>
+                                     @break
+
                                  @case('select')
                                      @php
                                          $lowerText = trim(strtolower($question->question_text));

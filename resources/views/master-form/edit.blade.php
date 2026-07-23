@@ -107,6 +107,9 @@
                                             <span class="font-weight-bold text-dark small">Pertanyaan</span>
                                         </div>
                                         <div class="d-flex align-items-center">
+                                            <button type="button" class="btn btn-link p-1 text-primary mr-1" @click="duplicateQuestion(globalIndex(question.id))" title="Duplikat Pertanyaan">
+                                                <i class="far fa-clone"></i>
+                                            </button>
                                             <button type="button" class="btn btn-link p-1 text-muted mr-1" @click="moveUp(globalIndex(question.id))" x-show="globalIndex(question.id) > 0" title="Pindah ke atas">
                                                 <i class="fas fa-arrow-up"></i>
                                             </button>
@@ -148,6 +151,8 @@
                                                     <option value="file">File upload (Unggah File)</option>
                                                     <option value="linear_scale">Linear scale (Skala Linear)</option>
                                                     <option value="rating">Rating (Bintang)</option>
+                                                    <option value="matrix_radio">Kisi pilihan ganda (Multiple Choice Grid)</option>
+                                                    <option value="matrix_checkbox">Petak kotak centang (Checkbox Grid)</option>
                                                     <option value="date">Date (Tanggal)</option>
                                                     <option value="time">Time (Waktu)</option>
                                                     <option value="number">Number (Angka)</option>
@@ -252,6 +257,64 @@
                                                 <option value="10">10 Bintang</option>
                                             </select>
                                         </div>
+
+                                        <!-- Options for matrix_radio and matrix_checkbox -->
+                                        <div x-show="['matrix_radio', 'matrix_checkbox'].includes(question.type)" class="mt-3 p-3 bg-light border rounded">
+                                            <div class="row">
+                                                <!-- Rows (Baris) -->
+                                                <div class="col-md-6 mb-3 mb-md-0 border-right">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                                        <label class="font-weight-bold text-dark small mb-0">
+                                                            <i class="fas fa-list-ol mr-1 text-danger"></i> Baris (Pertanyaan/Pernyataan)
+                                                        </label>
+                                                        <span class="badge badge-secondary small" style="font-size: 9px;" x-text="(question.matrix_rows || []).length + ' baris'"></span>
+                                                    </div>
+                                                    <div class="d-flex flex-column" style="gap: 8px;">
+                                                        <template x-for="(rowVal, rIndex) in question.matrix_rows" :key="'r-' + rIndex">
+                                                            <div class="d-flex align-items-center" style="gap: 6px;">
+                                                                <span class="badge badge-light border p-1" style="min-width: 24px; font-size:10px;" x-text="rIndex + 1"></span>
+                                                                <input type="text" x-model="question.matrix_rows[rIndex]" class="form-control form-control-sm" :placeholder="'Baris ' + (rIndex + 1)">
+                                                                <button type="button" class="btn btn-link p-1 text-danger" @click="removeMatrixRow(globalIndex(question.id), rIndex)" x-show="question.matrix_rows.length > 1">
+                                                                    <i class="fas fa-times-circle"></i>
+                                                                </button>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <button type="button" class="btn btn-link p-0 text-danger font-weight-bold small text-capitalize mt-2" @click="addMatrixRow(globalIndex(question.id))">
+                                                        <i class="fas fa-plus mr-1"></i> Tambahkan Baris
+                                                    </button>
+                                                </div>
+
+                                                <!-- Columns (Kolom) -->
+                                                <div class="col-md-6">
+                                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                                        <label class="font-weight-bold text-dark small mb-0">
+                                                            <i class="fas fa-columns mr-1 text-primary"></i> Kolom (Pilihan Skala/Opsi)
+                                                        </label>
+                                                        <span class="badge badge-secondary small" style="font-size: 9px;" x-text="(question.matrix_cols || []).length + ' kolom'"></span>
+                                                    </div>
+                                                    <div class="d-flex flex-column" style="gap: 8px;">
+                                                        <template x-for="(colVal, cIndex) in question.matrix_cols" :key="'c-' + cIndex">
+                                                            <div class="d-flex align-items-center" style="gap: 6px;">
+                                                                <template x-if="question.type === 'matrix_radio'">
+                                                                    <i class="far fa-circle text-muted" style="font-size: 12px;"></i>
+                                                                </template>
+                                                                <template x-if="question.type === 'matrix_checkbox'">
+                                                                    <i class="far fa-square text-muted" style="font-size: 12px;"></i>
+                                                                </template>
+                                                                <input type="text" x-model="question.matrix_cols[cIndex]" class="form-control form-control-sm" :placeholder="'Kolom ' + (cIndex + 1)">
+                                                                <button type="button" class="btn btn-link p-1 text-danger" @click="removeMatrixCol(globalIndex(question.id), cIndex)" x-show="question.matrix_cols.length > 1">
+                                                                    <i class="fas fa-times-circle"></i>
+                                                                </button>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <button type="button" class="btn btn-link p-0 text-primary font-weight-bold small text-capitalize mt-2" @click="addMatrixCol(globalIndex(question.id))">
+                                                        <i class="fas fa-plus mr-1"></i> Tambahkan Kolom
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </template>
@@ -286,6 +349,9 @@
             </button>
         </div>
 
+        <!-- Single JSON Payload hidden input to prevent max_input_vars limit -->
+        <input type="hidden" name="questions_json" :value="questionsJsonPayload">
+
         <!-- Hidden inputs populated on submit -->
         <template x-for="(question, qIndex) in questions" :key="'hidden-' + question.id">
             <div>
@@ -306,6 +372,16 @@
                         </div>
                     </template>
                 </template>
+                <template x-if="['matrix_radio', 'matrix_checkbox'].includes(question.type)">
+                    <div>
+                        <template x-for="(rVal, rIndex) in question.matrix_rows" :key="'mr-' + rIndex">
+                            <input type="hidden" :name="'questions[' + qIndex + '][matrix_rows][' + rIndex + ']'" :value="rVal">
+                        </template>
+                        <template x-for="(cVal, cIndex) in question.matrix_cols" :key="'mc-' + cIndex">
+                            <input type="hidden" :name="'questions[' + qIndex + '][matrix_cols][' + cIndex + ']'" :value="cVal">
+                        </template>
+                    </div>
+                </template>
             </div>
         </template>
 
@@ -314,9 +390,174 @@
             <a href="{{ route('master-form.index') }}" class="btn btn-outline-danger btn-md font-weight-bold m-0" style="border-radius: 8px;">
                 <i class="fas fa-arrow-left mr-2"></i> Kembali
             </a>
-            <button type="submit" :disabled="questions.length === 0" class="btn btn-danger btn-md font-weight-bold m-0 d-flex align-items-center" style="border-radius: 8px;">
-                <i class="fas fa-save mr-2"></i> Update Form
-            </button>
+            <div class="d-flex align-items-center" style="gap:10px;">
+                <a href="{{ route('master-form.preview', $form->id) }}" target="_blank" class="btn btn-outline-info btn-md font-weight-bold m-0" style="border-radius: 8px;">
+                    <i class="fas fa-eye mr-2"></i> Preview Halaman Publik
+                </a>
+                <button type="button" @click="showPreviewModal = true" class="btn btn-outline-secondary btn-md font-weight-bold m-0" style="border-radius: 8px;">
+                    <i class="fas fa-search mr-2"></i> Live Preview
+                </button>
+                <button type="submit" :disabled="questions.length === 0" class="btn btn-danger btn-md font-weight-bold m-0 d-flex align-items-center" style="border-radius: 8px;">
+                    <i class="fas fa-save mr-2"></i> Update Form
+                </button>
+            </div>
+        </div>
+
+        <!-- Live Preview Modal -->
+        <div x-show="showPreviewModal" x-cloak
+            style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;">
+            <div class="card shadow-lg border-0 w-100" style="max-width: 800px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column;">
+                <div class="card-header bg-dark text-white d-flex align-items-center justify-content-between py-3 px-4" style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                    <div class="d-flex align-items-center" style="gap: 10px;">
+                        <i class="fas fa-eye text-warning fa-lg"></i>
+                        <h6 class="font-weight-bold mb-0 text-white">Live Preview Tampilan Kuesioner</h6>
+                    </div>
+                    <button type="button" class="close text-white m-0" @click="showPreviewModal = false" style="opacity:0.8;">&times;</button>
+                </div>
+                <div class="card-body p-4" style="overflow-y: auto; background-color: #f8f9fa;">
+                    <div class="alert alert-info border-0 py-2 px-3 mb-4 small font-weight-bold" style="border-radius: 8px; background: rgba(23,162,184,0.1); color: #117a8b;">
+                        <i class="fas fa-info-circle mr-1"></i> Pratinjau langsung berdasarkan pertanyaan yang diinputkan saat ini.
+                    </div>
+
+                    <!-- Header Form Preview -->
+                    <div class="card border-0 mb-4 shadow-sm" style="border-radius: 12px;">
+                        <div class="bg-danger" style="height: 5px; border-top-left-radius: 12px; border-top-right-radius: 12px;"></div>
+                        <div class="card-body p-4">
+                            <h4 class="font-weight-bold text-dark mb-2" x-text="formTitle || 'Judul Form Kuesioner'"></h4>
+                            <p class="text-muted small mb-0">Isi kuesioner ini dengan sebenar-benarnya. Data Anda sangat berharga bagi peningkatan mutu layanan institusi kami.</p>
+                        </div>
+                    </div>
+
+                    <!-- Questions Preview -->
+                    <div class="d-flex flex-column" style="gap: 15px;">
+                        <template x-for="(question, qIdx) in questions" :key="'prev-' + question.id">
+                            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-start mb-2">
+                                        <span class="badge badge-danger p-2 mr-3 font-weight-bold d-flex align-items-center justify-content-center" style="width: 26px; height: 26px; border-radius: 6px; font-size: 0.8rem; flex-shrink: 0;" x-text="qIdx + 1"></span>
+                                        <div>
+                                            <h6 class="font-weight-bold text-dark mb-1" x-text="question.text || 'Pertanyaan ' + (qIdx + 1)"></h6>
+                                            <p class="text-muted small mb-0" x-show="question.description" x-text="question.description" style="font-style: italic;"></p>
+                                        </div>
+                                        <span class="text-danger font-weight-bold ml-1" x-show="question.required">*</span>
+                                    </div>
+
+                                    <div class="pl-4 mt-3">
+                                        <!-- Text / Number -->
+                                        <template x-if="['text', 'number'].includes(question.type)">
+                                            <input type="text" class="form-control form-control-sm" :placeholder="question.type === 'number' ? '0' : 'Jawaban singkat...'" disabled style="background:#fff; max-width: 350px;">
+                                        </template>
+
+                                        <!-- Textarea -->
+                                        <template x-if="question.type === 'textarea'">
+                                            <textarea class="form-control form-control-sm" rows="3" placeholder="Jawaban panjang..." disabled style="background:#fff;"></textarea>
+                                        </template>
+
+                                        <!-- Radio / Select / Checkbox -->
+                                        <template x-if="['radio', 'select', 'checkbox'].includes(question.type)">
+                                            <div>
+                                                <template x-if="question.type === 'select'">
+                                                    <select class="form-control form-control-sm browser-default custom-select" disabled style="background:#fff; max-width: 350px;">
+                                                        <option>-- Pilih Opsi --</option>
+                                                        <template x-for="(opt, oIdx) in question.options" :key="oIdx">
+                                                            <option x-text="opt || ('Opsi ' + (oIdx + 1))"></option>
+                                                        </template>
+                                                    </select>
+                                                </template>
+                                                <template x-if="['radio', 'checkbox'].includes(question.type)">
+                                                    <div class="d-flex flex-column" style="gap: 8px;">
+                                                        <template x-for="(opt, oIdx) in question.options" :key="oIdx">
+                                                            <div class="d-flex align-items-center">
+                                                                <input :type="question.type" class="mr-2" disabled>
+                                                                <span class="small font-weight-bold text-dark" x-text="opt || ('Opsi ' + (oIdx + 1))"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="question.has_others">
+                                                            <div class="d-flex align-items-center mt-1">
+                                                                <input :type="question.type" class="mr-2" disabled>
+                                                                <span class="small font-weight-bold text-dark mr-2">Lainnya:</span>
+                                                                <input type="text" class="form-control form-control-sm" placeholder="..." disabled style="background:#fff; max-width: 200px;">
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- Linear Scale -->
+                                        <template x-if="question.type === 'linear_scale'">
+                                            <div class="d-flex align-items-center flex-wrap" style="gap: 12px;">
+                                                <span class="small font-weight-bold text-muted" x-text="question.options[2] || ''"></span>
+                                                <div class="d-flex align-items-center" style="gap: 8px;">
+                                                    <template x-for="val in Array.from({length: (parseInt(question.options[1]||5) - parseInt(question.options[0]||1) + 1)}, (_, i) => parseInt(question.options[0]||1) + i)" :key="val">
+                                                        <div class="text-center">
+                                                            <div class="small font-weight-bold mb-1" x-text="val"></div>
+                                                            <input type="radio" disabled>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <span class="small font-weight-bold text-muted" x-text="question.options[3] || ''"></span>
+                                            </div>
+                                        </template>
+
+                                        <!-- Rating -->
+                                        <template x-if="question.type === 'rating'">
+                                            <div class="d-flex align-items-center text-warning" style="gap: 5px; font-size: 1.2rem;">
+                                                <template x-for="star in Array.from({length: parseInt(question.options[0] || 5)}, (_, i) => i + 1)" :key="star">
+                                                    <i class="far fa-star"></i>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- Matrix Radio / Matrix Checkbox Preview -->
+                                        <template x-if="['matrix_radio', 'matrix_checkbox'].includes(question.type)">
+                                            <div class="table-responsive rounded border bg-white mt-2">
+                                                <table class="table table-bordered table-sm mb-0 small">
+                                                    <thead class="bg-light">
+                                                        <tr>
+                                                            <th style="min-width: 150px;">Pernyataan / Baris</th>
+                                                            <template x-for="(cVal, cIdx) in (question.matrix_cols || [])" :key="'pcol-' + cIdx">
+                                                                <th class="text-center" x-text="cVal || ('Kolom ' + (cIdx + 1))"></th>
+                                                            </template>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="(rVal, rIdx) in (question.matrix_rows || [])" :key="'prow-' + rIdx">
+                                                            <tr>
+                                                                <td class="font-weight-bold" x-text="(rIdx + 1) + '. ' + (rVal || ('Baris ' + (rIdx + 1)))"></td>
+                                                                <template x-for="(cVal, cIdx) in (question.matrix_cols || [])" :key="'pcell-' + cIdx">
+                                                                    <td class="text-center">
+                                                                        <input :type="question.type === 'matrix_radio' ? 'radio' : 'checkbox'" disabled>
+                                                                    </td>
+                                                                </template>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </template>
+
+                                        <!-- File Upload -->
+                                        <template x-if="question.type === 'file'">
+                                            <div class="border rounded p-3 text-center bg-light text-muted small" style="border-style: dashed !important; max-width: 350px;">
+                                                <i class="fas fa-cloud-upload-alt fa-2x mb-1 text-danger"></i>
+                                                <div>Upload file (PDF, DOCX, JPG, Max 5MB)</div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div x-show="questions.length === 0" class="text-center py-4 text-muted bg-white rounded">
+                            Belum ada pertanyaan untuk di-preview.
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white d-flex justify-content-end py-3 px-4" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                    <button type="button" class="btn btn-secondary font-weight-bold btn-md" @click="showPreviewModal = false" style="border-radius: 8px;">Tutup Pratinjau</button>
+                </div>
+            </div>
         </div>
     </form>
 </div>
@@ -326,25 +567,26 @@
 <!-- Alpine JS (CDN) -->
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 @php
-    $formattedQuestions = $form->questions->filter(function($q) use ($form) {
-        if ($form->target_role === 'alumni') {
-            $lowerText = strtolower(trim($q->question_text));
-            if (
-                strpos($lowerText, 'universitas') !== false ||
-                strpos($lowerText, 'fakultas') !== false ||
-                strpos($lowerText, 'program studi') !== false ||
-                strpos($lowerText, 'prodi') !== false ||
-                (strpos($lowerText, 'nama') !== false && (strpos($lowerText, 'alumni') !== false || strpos($lowerText, 'mahasiswa') !== false))
-            ) {
-                return false;
-            }
-        }
-        return true;
+    $identityQuestionsList = ['pilih universitas', 'pilih fakultas', 'pilih program studi', 'pilih prodi', 'pilih nama alumni', 'pilih nama mahasiswa'];
+    $formattedQuestions = $form->questions->filter(function($q) use ($identityQuestionsList) {
+        $lowerText = strtolower(trim($q->question_text));
+        return !in_array($lowerText, $identityQuestionsList);
     })->map(function($q) {
         // Build goToSections map from options
         $goToSections = [];
         foreach ($q->options as $idx => $opt) {
             $goToSections[$idx] = $opt->go_to_section !== null ? (string)$opt->go_to_section : '';
+        }
+        $matrixRows = [];
+        $matrixCols = [];
+        if (in_array($q->question_type, ['matrix_radio', 'matrix_checkbox'])) {
+            foreach ($q->options as $opt) {
+                if (str_starts_with($opt->option_text, 'row:')) {
+                    $matrixRows[] = substr($opt->option_text, 4);
+                } elseif (str_starts_with($opt->option_text, 'col:')) {
+                    $matrixCols[] = substr($opt->option_text, 4);
+                }
+            }
         }
         return [
             'id' => $q->id,
@@ -355,6 +597,8 @@
             'sectionId' => $q->section_id ?? 1,
             'sectionTitle' => $q->section_title ?? '',
             'options' => $q->options->pluck('option_text')->toArray(),
+            'matrix_rows' => $matrixRows,
+            'matrix_cols' => $matrixCols,
             'goToSections' => $goToSections,
             'has_others' => (bool) $q->has_others,
         ];
@@ -379,6 +623,8 @@ function formBuilder() {
     const maxSectionId = @json($maxSectionId);
 
     return {
+        questionsJsonPayload: '',
+        showPreviewModal: false,
         formTitle: @json($form->title),
         questions: existingQuestions.map((q, i) => {
             let options = q.options;
@@ -397,6 +643,8 @@ function formBuilder() {
                 sectionId: q.sectionId || 1,
                 description: q.description || '',
                 options: options,
+                matrix_rows: q.matrix_rows && q.matrix_rows.length > 0 ? q.matrix_rows : ['Baris 1', 'Baris 2'],
+                matrix_cols: q.matrix_cols && q.matrix_cols.length > 0 ? q.matrix_cols : ['Sangat Tinggi', 'Tinggi', 'Cukup Tinggi', 'Rendah', 'Sangat Rendah'],
                 goToSections: q.goToSections || {},
                 has_others: q.has_others || false,
             };
@@ -487,6 +735,24 @@ function formBuilder() {
             this.questions.splice(index, 1);
         },
 
+        duplicateQuestion(index) {
+            const original = this.questions[index];
+            const copy = {
+                id: this.nextId++,
+                sectionId: original.sectionId,
+                text: original.text ? original.text + ' (Salinan)' : '',
+                description: original.description || '',
+                type: original.type,
+                required: original.required,
+                options: Array.isArray(original.options) ? [...original.options] : [],
+                matrix_rows: Array.isArray(original.matrix_rows) ? [...original.matrix_rows] : ['Baris 1', 'Baris 2'],
+                matrix_cols: Array.isArray(original.matrix_cols) ? [...original.matrix_cols] : ['Sangat Tinggi', 'Tinggi', 'Cukup Tinggi', 'Rendah', 'Sangat Rendah'],
+                goToSections: original.goToSections ? JSON.parse(JSON.stringify(original.goToSections)) : {},
+                has_others: !!original.has_others,
+            };
+            this.questions.splice(index + 1, 0, copy);
+        },
+
         moveUp(index) {
             if (index > 0) {
                 [this.questions[index - 1], this.questions[index]] = [this.questions[index], this.questions[index - 1]];
@@ -513,6 +779,21 @@ function formBuilder() {
             this.questions[qIndex].goToSections = newGoTo;
         },
 
+        addMatrixRow(qIndex) {
+            if (!this.questions[qIndex].matrix_rows) this.questions[qIndex].matrix_rows = [];
+            this.questions[qIndex].matrix_rows.push('');
+        },
+        removeMatrixRow(qIndex, rIndex) {
+            this.questions[qIndex].matrix_rows.splice(rIndex, 1);
+        },
+        addMatrixCol(qIndex) {
+            if (!this.questions[qIndex].matrix_cols) this.questions[qIndex].matrix_cols = [];
+            this.questions[qIndex].matrix_cols.push('');
+        },
+        removeMatrixCol(qIndex, cIndex) {
+            this.questions[qIndex].matrix_cols.splice(cIndex, 1);
+        },
+
         onTypeChange(qIndex) {
             const q = this.questions[qIndex];
             if (['radio', 'select', 'checkbox'].includes(q.type)) {
@@ -521,6 +802,16 @@ function formBuilder() {
                 }
                 q.goToSections = {};
                 q.has_others = q.has_others ?? false;
+            } else if (['matrix_radio', 'matrix_checkbox'].includes(q.type)) {
+                if (!q.matrix_rows || q.matrix_rows.length < 1) {
+                    q.matrix_rows = ['Etika', 'Keahlian berdasarkan bidang ilmu', 'Bahasa Inggris', 'Penggunaan Teknologi Informasi', 'Komunikasi', 'Kerja sama tim', 'Pengembangan Diri'];
+                }
+                if (!q.matrix_cols || q.matrix_cols.length < 1) {
+                    q.matrix_cols = ['Sangat Tinggi', 'Tinggi', 'Cukup Tinggi', 'Rendah', 'Sangat Rendah'];
+                }
+                q.options = [];
+                q.goToSections = {};
+                q.has_others = false;
             } else if (q.type === 'linear_scale') {
                 q.options = ['1', '5', '', ''];
                 q.goToSections = {};
@@ -555,6 +846,16 @@ function formBuilder() {
                         return;
                     }
                 }
+
+                if (['matrix_radio', 'matrix_checkbox'].includes(this.questions[i].type)) {
+                    const filledRows = (this.questions[i].matrix_rows || []).filter(r => r.trim() !== '');
+                    const filledCols = (this.questions[i].matrix_cols || []).filter(c => c.trim() !== '');
+                    if (filledRows.length < 1 || filledCols.length < 1) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Grid Tidak Lengkap', text: 'Pertanyaan #' + (i + 1) + ' membutuhkan minimal 1 baris dan 1 kolom.', confirmButtonColor: '#800000' });
+                        return;
+                    }
+                }
                 if (this.questions[i].type === 'linear_scale') {
                     const start = parseInt(this.questions[i].options[0]);
                     const end = parseInt(this.questions[i].options[1]);
@@ -565,9 +866,26 @@ function formBuilder() {
                     }
                 }
             }
+
+            // Serialize questions payload into single JSON string to bypass max_input_vars limit
+            const payload = this.questions.map((q, idx) => {
+                return {
+                    text: q.text,
+                    description: q.description || '',
+                    type: q.type,
+                    required: q.required ? 1 : 0,
+                    section_id: q.sectionId || 1,
+                    section_title: this.getSectionTitle(q.sectionId, idx),
+                    has_others: q.has_others ? 1 : 0,
+                    options: q.options || [],
+                    matrix_rows: q.matrix_rows || [],
+                    matrix_cols: q.matrix_cols || [],
+                    go_to_sections: q.goToSections || {}
+                };
+            });
+            this.questionsJsonPayload = JSON.stringify(payload);
         },
     };
 }
 </script>
 @endpush
-

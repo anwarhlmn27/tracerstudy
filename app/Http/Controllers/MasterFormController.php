@@ -36,6 +36,13 @@ class MasterFormController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->filled('questions_json')) {
+            $decoded = json_decode($request->input('questions_json'), true);
+            if (is_array($decoded)) {
+                $request->merge(['questions' => $decoded]);
+            }
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'target_role' => ['required', Rule::in(['alumni', 'atasan'])],
@@ -44,13 +51,17 @@ class MasterFormController extends Controller
             'questions' => ['required', 'array', 'min:1'],
             'questions.*.text' => ['required', 'string'],
             'questions.*.description' => ['nullable', 'string', 'max:1000'],
-            'questions.*.type' => ['required', Rule::in(['text', 'number', 'textarea', 'radio', 'select', 'select_db', 'checkbox', 'file', 'linear_scale', 'rating', 'date', 'time'])],
+            'questions.*.type' => ['required', Rule::in(['text', 'number', 'textarea', 'radio', 'select', 'select_db', 'checkbox', 'file', 'linear_scale', 'rating', 'date', 'time', 'matrix_radio', 'matrix_checkbox'])],
             'questions.*.db_source' => ['nullable', Rule::in(['universitas', 'fakultas', 'prodi', 'mahasiswa'])],
             'questions.*.required' => ['sometimes', 'boolean'],
             'questions.*.section_id' => ['nullable', 'integer', 'min:1'],
             'questions.*.section_title' => ['nullable', 'string', 'max:255'],
             'questions.*.options' => ['nullable', 'array'],
             'questions.*.options.*' => ['nullable', 'string'],
+            'questions.*.matrix_rows' => ['nullable', 'array'],
+            'questions.*.matrix_rows.*' => ['nullable', 'string'],
+            'questions.*.matrix_cols' => ['nullable', 'array'],
+            'questions.*.matrix_cols.*' => ['nullable', 'string'],
             'questions.*.go_to_sections' => ['nullable', 'array'],
             'questions.*.go_to_sections.*' => ['nullable', 'integer'],
             'questions.*.has_others' => ['sometimes', 'boolean'],
@@ -105,23 +116,10 @@ class MasterFormController extends Controller
         }
 
         foreach ($validated['questions'] as $index => $questionData) {
-            // Prevent duplicate identity questions if sent from UI
+            // Prevent duplicate identity questions if sent from UI (exact match only)
             $lowerText = strtolower(trim($questionData['text']));
-            if ($validated['target_role'] === 'alumni' && (
-                strpos($lowerText, 'universitas') !== false ||
-                strpos($lowerText, 'fakultas') !== false ||
-                strpos($lowerText, 'program studi') !== false ||
-                strpos($lowerText, 'prodi') !== false ||
-                (strpos($lowerText, 'nama') !== false && (strpos($lowerText, 'alumni') !== false || strpos($lowerText, 'mahasiswa') !== false))
-            )) {
-                continue;
-            }
-
-            if ($validated['target_role'] === 'atasan' && (
-                strpos($lowerText, 'program studi') !== false ||
-                strpos($lowerText, 'prodi') !== false ||
-                (strpos($lowerText, 'nama') !== false && (strpos($lowerText, 'alumni') !== false || strpos($lowerText, 'mahasiswa') !== false))
-            )) {
+            $identityQuestionsList = ['pilih universitas', 'pilih fakultas', 'pilih program studi', 'pilih prodi', 'pilih nama alumni', 'pilih nama mahasiswa'];
+            if (in_array($lowerText, $identityQuestionsList)) {
                 continue;
             }
 
@@ -153,6 +151,32 @@ class MasterFormController extends Controller
                         ]);
                     }
                 }
+            } elseif (in_array($questionData['type'], ['matrix_radio', 'matrix_checkbox'])) {
+                $mOrder = 0;
+                if (!empty($questionData['matrix_rows'])) {
+                    foreach ($questionData['matrix_rows'] as $rVal) {
+                        if (isset($rVal) && trim($rVal) !== '') {
+                            FormQuestionOption::create([
+                                'id' => (string) Str::uuid(),
+                                'question_id' => $question->id,
+                                'option_text' => 'row:' . trim($rVal),
+                                'sort_order' => $mOrder++,
+                            ]);
+                        }
+                    }
+                }
+                if (!empty($questionData['matrix_cols'])) {
+                    foreach ($questionData['matrix_cols'] as $cVal) {
+                        if (isset($cVal) && trim($cVal) !== '') {
+                            FormQuestionOption::create([
+                                'id' => (string) Str::uuid(),
+                                'question_id' => $question->id,
+                                'option_text' => 'col:' . trim($cVal),
+                                'sort_order' => $mOrder++,
+                            ]);
+                        }
+                    }
+                }
             }
         }
 
@@ -176,6 +200,13 @@ class MasterFormController extends Controller
     {
         $form = QuestionnaireForm::findOrFail($id);
 
+        if ($request->filled('questions_json')) {
+            $decoded = json_decode($request->input('questions_json'), true);
+            if (is_array($decoded)) {
+                $request->merge(['questions' => $decoded]);
+            }
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'target_role' => ['required', Rule::in(['alumni', 'atasan'])],
@@ -184,13 +215,17 @@ class MasterFormController extends Controller
             'questions' => ['required', 'array', 'min:1'],
             'questions.*.text' => ['required', 'string'],
             'questions.*.description' => ['nullable', 'string', 'max:1000'],
-            'questions.*.type' => ['required', Rule::in(['text', 'number', 'textarea', 'radio', 'select', 'select_db', 'checkbox', 'file', 'linear_scale', 'rating', 'date', 'time'])],
+            'questions.*.type' => ['required', Rule::in(['text', 'number', 'textarea', 'radio', 'select', 'select_db', 'checkbox', 'file', 'linear_scale', 'rating', 'date', 'time', 'matrix_radio', 'matrix_checkbox'])],
             'questions.*.db_source' => ['nullable', Rule::in(['universitas', 'fakultas', 'prodi', 'mahasiswa'])],
             'questions.*.required' => ['sometimes', 'boolean'],
             'questions.*.section_id' => ['nullable', 'integer', 'min:1'],
             'questions.*.section_title' => ['nullable', 'string', 'max:255'],
             'questions.*.options' => ['nullable', 'array'],
             'questions.*.options.*' => ['nullable', 'string'],
+            'questions.*.matrix_rows' => ['nullable', 'array'],
+            'questions.*.matrix_rows.*' => ['nullable', 'string'],
+            'questions.*.matrix_cols' => ['nullable', 'array'],
+            'questions.*.matrix_cols.*' => ['nullable', 'string'],
             'questions.*.go_to_sections' => ['nullable', 'array'],
             'questions.*.go_to_sections.*' => ['nullable', 'integer'],
             'questions.*.has_others' => ['sometimes', 'boolean'],
@@ -247,23 +282,10 @@ class MasterFormController extends Controller
 
         // Re-create questions
         foreach ($validated['questions'] as $index => $questionData) {
-            // Prevent duplicate identity questions if sent from UI
+            // Prevent duplicate identity questions if sent from UI (exact match only)
             $lowerText = strtolower(trim($questionData['text']));
-            if ($validated['target_role'] === 'alumni' && (
-                strpos($lowerText, 'universitas') !== false ||
-                strpos($lowerText, 'fakultas') !== false ||
-                strpos($lowerText, 'program studi') !== false ||
-                strpos($lowerText, 'prodi') !== false ||
-                (strpos($lowerText, 'nama') !== false && (strpos($lowerText, 'alumni') !== false || strpos($lowerText, 'mahasiswa') !== false))
-            )) {
-                continue;
-            }
-
-            if ($validated['target_role'] === 'atasan' && (
-                strpos($lowerText, 'program studi') !== false ||
-                strpos($lowerText, 'prodi') !== false ||
-                (strpos($lowerText, 'nama') !== false && (strpos($lowerText, 'alumni') !== false || strpos($lowerText, 'mahasiswa') !== false))
-            )) {
+            $identityQuestionsList = ['pilih universitas', 'pilih fakultas', 'pilih program studi', 'pilih prodi', 'pilih nama alumni', 'pilih nama mahasiswa'];
+            if (in_array($lowerText, $identityQuestionsList)) {
                 continue;
             }
 
@@ -292,6 +314,32 @@ class MasterFormController extends Controller
                             'sort_order' => $optIndex,
                             'go_to_section' => $goToVal,
                         ]);
+                    }
+                }
+            } elseif (in_array($questionData['type'], ['matrix_radio', 'matrix_checkbox'])) {
+                $mOrder = 0;
+                if (!empty($questionData['matrix_rows'])) {
+                    foreach ($questionData['matrix_rows'] as $rVal) {
+                        if (isset($rVal) && trim($rVal) !== '') {
+                            FormQuestionOption::create([
+                                'id' => (string) Str::uuid(),
+                                'question_id' => $question->id,
+                                'option_text' => 'row:' . trim($rVal),
+                                'sort_order' => $mOrder++,
+                            ]);
+                        }
+                    }
+                }
+                if (!empty($questionData['matrix_cols'])) {
+                    foreach ($questionData['matrix_cols'] as $cVal) {
+                        if (isset($cVal) && trim($cVal) !== '') {
+                            FormQuestionOption::create([
+                                'id' => (string) Str::uuid(),
+                                'question_id' => $question->id,
+                                'option_text' => 'col:' . trim($cVal),
+                                'sort_order' => $mOrder++,
+                            ]);
+                        }
                     }
                 }
             }

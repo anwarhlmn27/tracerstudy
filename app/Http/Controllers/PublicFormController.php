@@ -53,6 +53,18 @@ class PublicFormController extends Controller
     }
 
     /**
+     * Preview a questionnaire form without saving answers.
+     */
+    public function preview(string $id)
+    {
+        $activeForm = QuestionnaireForm::with(['questions.options'])->findOrFail($id);
+        $hasFilledActiveForm = false;
+        $isPreview = true;
+
+        return view('public-form', compact('activeForm', 'hasFilledActiveForm', 'isPreview'));
+    }
+
+    /**
      * Store a guest form response.
      */
     public function store(Request $request)
@@ -177,7 +189,9 @@ class PublicFormController extends Controller
                 if ($question->question_type === 'radio' && $answerValue === 'Others') {
                     $answerValue = $request->input("answers_others.{$question->id}") ?: 'Lainnya';
                 }
-                if ($question->question_type === 'checkbox' && is_array($answerValue)) {
+                if (in_array($question->question_type, ['matrix_radio', 'matrix_checkbox']) && is_array($answerValue)) {
+                    $answerValue = json_encode($answerValue, JSON_UNESCAPED_UNICODE);
+                } elseif ($question->question_type === 'checkbox' && is_array($answerValue)) {
                     if (in_array('Others', $answerValue)) {
                         $otherVal = $request->input("answers_others.{$question->id}");
                         if (!empty($otherVal)) {
