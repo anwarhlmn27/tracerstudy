@@ -405,9 +405,17 @@
             </div>
         </div>
 
+@push('styles')
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+@endpush
+
         <!-- Live Preview Modal -->
         <div x-show="showPreviewModal" x-cloak
-            style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto;">
+            class="align-items-center justify-content-center"
+            :class="{ 'd-flex': showPreviewModal }"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 9999; padding: 20px; overflow-y: auto;">
             <div class="card shadow-lg border-0 w-100" style="max-width: 800px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column;">
                 <div class="card-header bg-dark text-white d-flex align-items-center justify-content-between py-3 px-4" style="border-top-left-radius: 16px; border-top-right-radius: 16px;">
                     <div class="d-flex align-items-center" style="gap: 10px;">
