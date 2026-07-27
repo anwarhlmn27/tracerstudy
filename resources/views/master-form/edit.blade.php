@@ -180,7 +180,8 @@
                                                         <span class="badge badge-light p-2 font-weight-bold" style="font-size: 10px; min-width:26px; text-align:center;" x-text="String.fromCharCode(65 + oIndex)"></span>
                                                         <input type="text" x-model="question.options[oIndex]" class="form-control form-control-sm" style="flex:1; min-width:120px;" :placeholder="'Opsi ' + (oIndex + 1)">
                                                         <template x-if="['radio', 'select'].includes(question.type) && sections.length > 1">
-                                                            <select x-model="question.goToSections[oIndex]"
+                                                            <select :value="question.goToSections[oIndex]" @change="question.goToSections[oIndex] = $event.target.value"
+                                                                x-init="$nextTick(() => { $el.value = (question.goToSections[oIndex] !== undefined && question.goToSections[oIndex] !== null) ? String(question.goToSections[oIndex]) : '' })"
                                                                 class="form-control form-control-sm browser-default custom-select"
                                                                 style="min-width:160px; max-width:200px; font-size:11px;"
                                                                 :id="'go_to_' + question.id + '_' + oIndex">
@@ -893,6 +894,12 @@ function formBuilder() {
                 };
             });
             this.questionsJsonPayload = JSON.stringify(payload);
+            
+            // Set directly to DOM to ensure synchronous update before form submission
+            const jsonInput = document.querySelector('input[name="questions_json"]');
+            if (jsonInput) {
+                jsonInput.value = this.questionsJsonPayload;
+            }
         },
     };
 }

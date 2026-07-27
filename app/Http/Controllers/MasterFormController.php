@@ -224,6 +224,7 @@ class MasterFormController extends Controller
                 $request->merge(['questions' => $decoded]);
             }
         }
+        \Log::info('MasterForm Update Payload:', $request->all());
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
