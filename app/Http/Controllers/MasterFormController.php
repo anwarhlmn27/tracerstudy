@@ -39,6 +39,15 @@ class MasterFormController extends Controller
         if ($request->filled('questions_json')) {
             $decoded = json_decode($request->input('questions_json'), true);
             if (is_array($decoded)) {
+                foreach ($decoded as &$qData) {
+                    if (isset($qData['go_to_sections']) && is_array($qData['go_to_sections'])) {
+                        foreach ($qData['go_to_sections'] as $k => $v) {
+                            if ($v === '') {
+                                $qData['go_to_sections'][$k] = null;
+                            }
+                        }
+                    }
+                }
                 $request->merge(['questions' => $decoded]);
             }
         }
@@ -203,6 +212,15 @@ class MasterFormController extends Controller
         if ($request->filled('questions_json')) {
             $decoded = json_decode($request->input('questions_json'), true);
             if (is_array($decoded)) {
+                foreach ($decoded as &$qData) {
+                    if (isset($qData['go_to_sections']) && is_array($qData['go_to_sections'])) {
+                        foreach ($qData['go_to_sections'] as $k => $v) {
+                            if ($v === '') {
+                                $qData['go_to_sections'][$k] = null;
+                            }
+                        }
+                    }
+                }
                 $request->merge(['questions' => $decoded]);
             }
         }
