@@ -186,7 +186,7 @@
                                                                 :id="'go_to_' + question.id + '_' + oIndex">
                                                                 <option value="">Lanjut ke berikutnya</option>
                                                                 <template x-for="sec in sections" :key="sec.id">
-                                                                    <option :value="sec.id" x-text="'→ Section ' + sec.id + (sec.title ? ': ' + sec.title : '')"></option>
+                                                                    <option :value="String(sec.id)" x-text="'→ Section ' + sec.id + (sec.title ? ': ' + sec.title : '')"></option>
                                                                 </template>
                                                                 <option value="-1">⏹ Selesaikan form</option>
                                                             </select>
@@ -612,12 +612,13 @@
         ];
     })->values()->all();
 
-    // Build sections from questions
     $sectionsMap = [];
     foreach ($form->questions as $q) {
         $sid = $q->section_id ?? 1;
         if (!isset($sectionsMap[$sid])) {
             $sectionsMap[$sid] = ['id' => $sid, 'title' => $q->section_title ?? ''];
+        } elseif (empty($sectionsMap[$sid]['title']) && !empty($q->section_title)) {
+            $sectionsMap[$sid]['title'] = $q->section_title;
         }
     }
     ksort($sectionsMap);
